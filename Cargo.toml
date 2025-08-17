@@ -7,6 +7,7 @@ license = "MIT"
 keywords = ["Quantum Computing", "Quantum Algorithms", "Rust", "Variational Quantum Circuits", "Quantum Machine Learning"]
 readme = "README.md"
 homepage = "https://zazabap.github.io/qforge"
+description = "This project is a quantum computing library developed in Rust, inspired by existing libraries such as QPP in C++, Yao.jl in Julia, and Pennylane in Python. The library aims to provide a comprehensive set of tools for quantum computing, including quantum gates, circuits, states, algorithms, and noise simulation."
 
 [dependencies]
 ndarray = "0.15"  # For numerical operations and state representation
