@@ -1,0 +1,23 @@
+[package]
+name = "qforge"
+version = "0.1.0"
+edition = "2021"
+authors = ["Shiwen An <shiwen.an@riken.jp>"]
+license = "MIT"
+keywords = ["Quantum Computing", "Quantum Algorithms", "Rust", "Variational Quantum Circuits", "Quantum Machine Learning"]
+readme = "README.md"
+homepage = "https://zazabap.github.io/qforge"
+
+[dependencies]
+ndarray = "0.15"  # For numerical operations and state representation
+rand = "0.8"      # For random number generation in algorithms
+thiserror = "1.0" # For error handling
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+opt-level = 3
