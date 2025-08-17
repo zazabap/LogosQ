@@ -20,7 +20,7 @@ To build and run the project, ensure you have Rust installed on your machine. Yo
 Clone the repository and navigate to the project directory:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/zazabap/qforge.git
 cd qforge
 ```
 
