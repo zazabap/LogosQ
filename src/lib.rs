@@ -1,8 +1,21 @@
-// This file defines the public API of the quantum computing library, re-exporting modules and types from other files.
+//! QForge: A quantum computing library in Rust
+//!
+//! This library provides tools for quantum computing simulation, including
+//! quantum states, gates, circuits, algorithms, and noise simulation.
 
-pub mod gates;
-pub mod circuits;
-pub mod states;
+// Keep the modules
 pub mod algorithms;
+pub mod circuits;
+pub mod gates;
 pub mod noise;
+pub mod prelude;
+pub mod states;
 pub mod utils;
+
+// Re-export common types at the crate root
+pub use gates::{Gate, MatrixGate};
+pub use states::State;
+
+// Commonly used dependencies re-exported for convenience
+pub use ndarray;
+pub use num_complex;

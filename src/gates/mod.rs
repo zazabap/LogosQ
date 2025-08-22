@@ -24,3 +24,31 @@
 // pub fn create_cnot(control: usize, target: usize) -> CNOTGate {
 //     CNOTGate::new(control, target)
 // }
+
+use crate::states::State;
+use ndarray::Array2;
+use num_complex::Complex64;
+
+/// Trait for quantum gates.
+pub trait Gate {
+    fn apply(&self, state: &mut State);
+}
+
+/// Implementation of a generic matrix gate.
+pub struct MatrixGate {
+    pub matrix: Array2<Complex64>,
+}
+
+impl Gate for MatrixGate {
+    fn apply(&self, state: &mut State) {
+        // Check matrix dimensions
+        assert_eq!(
+            self.matrix.shape()[1],
+            state.vector.len(),
+            "Matrix columns must match state dimension"
+        );
+
+        state.vector = self.matrix.dot(&state.vector);
+        state.normalize();
+    }
+}
