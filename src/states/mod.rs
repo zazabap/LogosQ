@@ -144,3 +144,12 @@ impl State {
         }
     }
 }
+
+impl Clone for State {
+    fn clone(&self) -> Self {
+        State {
+            vector: self.vector.clone(),
+            num_qubits: self.num_qubits,
+        }
+    }
+}
