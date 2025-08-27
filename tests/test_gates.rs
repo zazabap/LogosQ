@@ -1,6 +1,6 @@
 use num_complex::{Complex64};
-use qforge::gates::*;
-use qforge::states::State;
+use logosq::gates::*;
+use logosq::states::State;
 use std::f64::consts::{PI, SQRT_2};
 
 #[test]
@@ -223,7 +223,7 @@ fn test_cnot_gate() {
     assert_eq!(cnot.matrix.shape(), &[4, 4]);
     
     // Set up a 2-qubit circuit with CNOT
-    let mut circuit = qforge::circuits::Circuit::new(2);
+    let mut circuit = logosq::circuits::Circuit::new(2);
     circuit.add_matrix_gate(cnot.matrix.clone(), vec![0, 1], "CNOT");
     
     // Test |00⟩ → |00⟩ (no flip when control is 0)
@@ -237,7 +237,7 @@ fn test_cnot_gate() {
     // Test |10⟩ → |11⟩ (flip when control is 1)
     let mut state = State::zero_state(2);
     let x = x_gate();
-    let mut x_circuit = qforge::circuits::Circuit::new(2);
+    let mut x_circuit = logosq::circuits::Circuit::new(2);
     x_circuit.add_single_qubit_gate(x.matrix.clone(), 0, "X");
     x_circuit.execute(&mut state);
     
@@ -250,7 +250,7 @@ fn test_cnot_gate() {
     // Test |+0⟩ → Bell state (1/√2)(|00⟩ + |11⟩)
     let mut state = State::zero_state(2);
     let h = h_gate();
-    let mut h_circuit = qforge::circuits::Circuit::new(2);
+    let mut h_circuit = logosq::circuits::Circuit::new(2);
     h_circuit.add_single_qubit_gate(h.matrix.clone(), 0, "H");
     h_circuit.execute(&mut state);
     
@@ -270,13 +270,13 @@ fn test_swap_gate() {
     assert_eq!(swap.matrix.shape(), &[4, 4]);
     
     // Set up a 2-qubit circuit with SWAP
-    let mut circuit = qforge::circuits::Circuit::new(2);
+    let mut circuit = logosq::circuits::Circuit::new(2);
     circuit.add_matrix_gate(swap.matrix.clone(), vec![0, 1], "SWAP");
     
     // Test |01⟩ → |10⟩ (swap states)
     let mut state = State::zero_state(2);
     let x = x_gate();
-    let mut x_circuit = qforge::circuits::Circuit::new(2);
+    let mut x_circuit = logosq::circuits::Circuit::new(2);
     x_circuit.add_single_qubit_gate(x.matrix.clone(), 1, "X");
     x_circuit.execute(&mut state);
     
@@ -301,13 +301,13 @@ fn test_cz_gate() {
     assert_eq!(cz.matrix.shape(), &[4, 4]);
     
     // Set up a 2-qubit circuit with CZ
-    let mut circuit = qforge::circuits::Circuit::new(2);
+    let mut circuit = logosq::circuits::Circuit::new(2);
     circuit.add_matrix_gate(cz.matrix.clone(), vec![0, 1], "CZ");
     
     // Test |11⟩ → -|11⟩ (phase flip when both qubits are 1)
     let mut state = State::zero_state(2);
     let x = x_gate();
-    let mut x_circuit = qforge::circuits::Circuit::new(2);
+    let mut x_circuit = logosq::circuits::Circuit::new(2);
     x_circuit.add_single_qubit_gate(x.matrix.clone(), 0, "X");
     x_circuit.add_single_qubit_gate(x.matrix.clone(), 1, "X");
     x_circuit.execute(&mut state);
@@ -334,13 +334,13 @@ fn test_toffoli_gate() {
     assert_eq!(toffoli.matrix.shape(), &[8, 8]);
     
     // Set up a 3-qubit circuit with Toffoli
-    let mut circuit = qforge::circuits::Circuit::new(3);
+    let mut circuit = logosq::circuits::Circuit::new(3);
     circuit.add_matrix_gate(toffoli.matrix.clone(), vec![0, 1, 2], "Toffoli");
     
     // Test |110⟩ → |111⟩ (flip target when both controls are 1)
     let mut state = State::zero_state(3);
     let x = x_gate();
-    let mut x_circuit = qforge::circuits::Circuit::new(3);
+    let mut x_circuit = logosq::circuits::Circuit::new(3);
     x_circuit.add_single_qubit_gate(x.matrix.clone(), 0, "X");
     x_circuit.add_single_qubit_gate(x.matrix.clone(), 1, "X");
     x_circuit.execute(&mut state);

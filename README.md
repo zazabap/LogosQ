@@ -3,6 +3,8 @@
 ## Overview
 This project is a quantum computing library developed in Rust, inspired by existing libraries such as QPP in C++, Yao.jl in Julia, and Pennylane in Python. The library aims to provide a comprehensive set of tools for quantum computing, including quantum gates, circuits, states, algorithms, and noise simulation.
 
+λόγος (lógos) comes from Greek means the logic.
+
 ## Project Structure
 The project is organized into several modules, each responsible for a specific aspect of quantum computing:
 
@@ -20,8 +22,8 @@ To build and run the project, ensure you have Rust installed on your machine. Yo
 Clone the repository and navigate to the project directory:
 
 ```bash
-git clone https://github.com/zazabap/qforge.git
-cd qforge
+git clone https://github.com/zazabap/logosq.git
+cd logosq
 ```
 
 Then, build the project using Cargo:
@@ -34,7 +36,7 @@ cargo build
 To use the library, you can include it in your Rust project by adding it as a dependency in your `Cargo.toml` file. Here’s an example of how to create and manipulate basic quantum gates:
 
 ```rust
-use qforge::gates::{Gate, Hadamard};
+use logosq::gates::{Gate, Hadamard};
 
 fn main() {
     let h_gate = Hadamard::new();

@@ -2,9 +2,9 @@
 // It uses the criterion crate for benchmarking.
 
 // use criterion::{black_box, criterion_group, criterion_main, Criterion};
-// use qforge::gates::{Gate, Pauli, Hadamard, CNOT};
-// use qforge::states::State;
-// use qforge::circuits::Circuit;
+// use logosq::gates::{Gate, Pauli, Hadamard, CNOT};
+// use logosq::states::State;
+// use logosq::circuits::Circuit;
 
 // fn benchmark_gate_operations(c: &mut Criterion) {
 //     c.bench_function("Pauli X gate", |b| {

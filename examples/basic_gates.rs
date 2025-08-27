@@ -1,8 +1,8 @@
 // This file demonstrates the usage of the quantum computing library to create and manipulate basic quantum gates.
 
-use qforge::circuits::Circuit;
-use qforge::gates::{cnot_gate, h_gate, x_gate, Gate};
-use qforge::states::State;
+use logosq::circuits::Circuit;
+use logosq::gates::{cnot_gate, h_gate, x_gate, Gate};
+use logosq::states::State;
 
 fn main() {
     // Create single-qubit gates

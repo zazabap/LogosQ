@@ -1,8 +1,8 @@
 use ndarray::Array2;
 use num_complex::Complex64;
-use qforge::circuits::Circuit;
-use qforge::gates::*;
-use qforge::states::State;
+use logosq::circuits::Circuit;
+use logosq::gates::*;
+use logosq::states::State;
 use std::f64::consts::{PI};
 
 #[test]

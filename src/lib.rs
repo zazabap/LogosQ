@@ -1,4 +1,4 @@
-//! QForge: A quantum computing library in Rust
+//! logosq: A quantum computing library in Rust
 //!
 //! This library provides tools for quantum computing simulation, including
 //! quantum states, gates, circuits, algorithms, and noise simulation.

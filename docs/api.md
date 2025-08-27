@@ -1,8 +1,8 @@
-# API Documentation for Qforge Quantum Computing Library
+# API Documentation for logosq Quantum Computing Library
 
 ## Overview
 
-The Qforge library provides a comprehensive set of tools for quantum computing, including the ability to define and manipulate quantum gates, circuits, and states, as well as implement various quantum algorithms. This document outlines the public API of the library, detailing the available types, functions, and usage examples.
+The logosq library provides a comprehensive set of tools for quantum computing, including the ability to define and manipulate quantum gates, circuits, and states, as well as implement various quantum algorithms. This document outlines the public API of the library, detailing the available types, functions, and usage examples.
 
 ## Modules
 
@@ -77,9 +77,9 @@ The `utils` module contains utility functions and types.
 ## Usage Example
 
 ```rust
-use qforge::gates::{pauli_x, hadamard, cnot};
-use qforge::circuits::Circuit;
-use qforge::states::State;
+use logosq::gates::{pauli_x, hadamard, cnot};
+use logosq::circuits::Circuit;
+use logosq::states::State;
 
 fn main() {
     let mut circuit = Circuit::new();
@@ -95,4 +95,4 @@ fn main() {
 
 ## Conclusion
 
-This API documentation provides a high-level overview of the Qforge library's capabilities. For more detailed information, please refer to the individual module documentation and usage examples provided in the `examples` directory.
+This API documentation provides a high-level overview of the logosq library's capabilities. For more detailed information, please refer to the individual module documentation and usage examples provided in the `examples` directory.

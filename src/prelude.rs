@@ -1,6 +1,6 @@
 //! Common types and traits, re-exported for convenience.
 //!
-//! Users can import everything needed with: `use qforge::prelude::*;`
+//! Users can import everything needed with: `use logosq::prelude::*;`
 
 // Re-export entire modules
 pub use crate::states;
