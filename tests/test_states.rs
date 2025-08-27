@@ -1,6 +1,5 @@
 use ndarray::{Array1, Array2};
-use num_complex::{Complex, Complex64};
-use qforge::gates::Gate;
+use num_complex::{Complex64};
 use qforge::states::State;
 use qforge::MatrixGate;
 use std::f64::consts::SQRT_2;

@@ -1,18 +1,14 @@
 // This file demonstrates the usage of the quantum computing library to create and manipulate basic quantum gates.
 
-use ndarray::Array2;
-use num_complex::Complex64;
 use qforge::circuits::Circuit;
-use qforge::gates::{cnot_gate, h_gate, x_gate, z_gate, Gate};
+use qforge::gates::{cnot_gate, h_gate, x_gate, Gate};
 use qforge::states::State;
-use std::f64::consts::SQRT_2;
 
 fn main() {
     // Create single-qubit gates
     println!("Creating basic quantum gates:");
     let x = x_gate();
     let h = h_gate();
-    let z = z_gate();
     println!("Created basic gates: X, H, Z");
 
     // Demonstrate gates on quantum states
@@ -64,7 +60,7 @@ fn main() {
     let mut ones_ones = 0;
 
     for _ in 0..100 {
-        let mut test_state = state.clone();
+        let test_state = state.clone();
         let result = test_state.measure();
         if result == 0 {
             zeros_zeros += 1;
