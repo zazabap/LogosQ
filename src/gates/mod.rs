@@ -3,8 +3,8 @@
 
 use crate::states::State;
 use ndarray::Array2;
-use num_complex::{Complex64};
-use std::f64::consts::{SQRT_2};
+use num_complex::Complex64;
+use std::f64::consts::SQRT_2;
 
 /// Trait for quantum gates.
 pub trait Gate {

@@ -1,7 +1,7 @@
-use ndarray::{Array1, Array2};
-use num_complex::{Complex64};
 use logosq::states::State;
 use logosq::MatrixGate;
+use ndarray::{Array1, Array2};
+use num_complex::Complex64;
 use std::f64::consts::SQRT_2;
 
 mod tests {
