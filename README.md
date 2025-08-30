@@ -2,7 +2,7 @@
 
 <div align="center">
   <h1>
-    <img src="docs/LogosQ.jpg" alt="LogosQ Logo" width="80" height="80" style="vertical-align: middle;">
+    <img src="docs/LogosQ.png" alt="LogosQ Logo" width="80" height="80" style="vertical-align: middle;">
     LogosQ: Quantum Computing Library in Rust
   </h1>
 </div>
