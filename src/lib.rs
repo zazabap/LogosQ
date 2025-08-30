@@ -11,6 +11,7 @@ pub mod noise;
 pub mod prelude;
 pub mod states;
 pub mod utils;
+pub mod vis;
 
 // Re-export common types at the crate root
 pub use gates::{Gate, MatrixGate};
