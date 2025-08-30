@@ -1,8 +1,8 @@
 [package]
 name = "logosq"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-authors = ["Shiwen An <shiwen.an@riken.jp>"]
+authors = ["Shiwen An <an.s.aa@m.titech.ac.jp>"]
 license = "MIT"
 keywords = ["QuantumComputing", "QuantumInformation", "VQC", "QML"]
 readme = "README.md"
