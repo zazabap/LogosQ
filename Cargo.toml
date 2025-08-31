@@ -1,12 +1,12 @@
 [package]
 name = "logosq"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Shiwen An <an.s.aa@m.titech.ac.jp>"]
 license = "MIT"
 keywords = ["QuantumComputing", "QuantumInformation", "VQC", "QML"]
 readme = "README.md"
-homepage = "https://zazabap.github.io/logosq"
+homepage = "https://logosqbook.vercel.app"
 description = "This project is a quantum computing library developed in Rust, inspired by existing libraries such as QPP in C++, Yao.jl in Julia, and Pennylane in Python. "
 
 [dependencies]

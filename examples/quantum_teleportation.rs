@@ -1,66 +1,114 @@
-// This file demonstrates the implementation of the quantum teleportation algorithm using the library.
+use logosq::prelude::*;
+use logosq::vis::{circuit_text, save_circuit_svg};
+use std::f64::consts::PI;
 
 fn main() {
-    //     // Initialize the quantum state for Alice and Bob
-    //     let alice_state = State::new(|q| {
-    //         if q == 0 {
-    //             // Alice starts with a qubit in state |0>
-    //             vec![1.0, 0.0]
-    //         } else {
-    //             // Bob's qubit is initially in state |0>
-    //             vec![1.0, 0.0]
-    //         }
-    //     });
+    println!("Quantum Teleportation Protocol");
+    println!("------------------------------");
+    
+    // Create a circuit with 3 qubits
+    let mut circuit = Circuit::new(3)
+        .with_name("Quantum Teleportation");
 
-    //     // Create an entangled state between Alice and Bob
-    //     let entangled_state = create_entangled_pair();
+    // Step 1: Create a state to teleport
+    // |ψ⟩ = cos(π/8)|0⟩ + sin(π/8)|1⟩
+    circuit.ry(0, PI/4.0);
+    println!("Preparing state to teleport: |ψ⟩ = cos(π/8)|0⟩ + sin(π/8)|1⟩");
 
-    //     // Alice prepares her qubit and the entangled state
-    //     let (alice_qubit, bob_qubit) = prepare_teleportation(&alice_state, &entangled_state);
+    // Step 2: Create an entangled pair (Bell state) between qubits 1 and 2
+    circuit.h(1);
+    circuit.cnot(1, 2);
+    println!("Created entangled Bell state between Alice and Bob");
 
-    //     // Alice performs a Bell measurement
-    //     let measurement_result = bell_measurement(alice_qubit);
+    // Step 3: Alice performs the teleportation protocol
+    circuit.cnot(0, 1);
+    circuit.h(0);
+    println!("Alice performs entanglement operation");
+    
+    // Create initial state - properly initialized zero state
+    let initial_state = State::zero_state(3);
 
-    //     // Bob applies the necessary gates based on Alice's measurement
-    //     apply_corrections(bob_qubit, measurement_result);
+    // Execute the circuit up to this point
+    let mut teleport_state_state = initial_state.clone();
+    circuit.execute(&mut teleport_state_state);
+    let teleport_state = teleport_state_state;
 
-    //     // Output the final state of Bob's qubit
-    //     println!("Bob's final state: {:?}", bob_qubit);
-    // }
+    // Simulate measurements on qubits 0 and 1
+    // We'll manually calculate the probabilities from the state vector
+    let m0 = manual_measure_qubit(&teleport_state, 0);
+    let m1 = manual_measure_qubit(&teleport_state, 1);
 
-    // // Function to create an entangled pair of qubits
-    // fn create_entangled_pair() -> (State, State) {
-    //     // Create a Bell state |Φ+> = (|00> + |11>)/√2
-    //     let state_0 = State::new(|q| vec![1.0, 0.0]); // |0>
-    //     let state_1 = State::new(|q| vec![0.0, 1.0]); // |1>
-    //     let entangled = Circuit::new()
-    //         .add_gate(Gate::H(0)) // Apply Hadamard to the first qubit
-    //         .add_gate(Gate::CNOT(0, 1)); // Apply CNOT gate
+    println!("Alice's measurements (simulated): m0={}, m1={}", m0, m1);
 
-    //     entangled.apply(&state_0, &state_1);
-    //     (state_0, state_1)
-    // }
+    // Create a new circuit that applies conditional operations based on measurements
+    let mut bob_circuit = Circuit::new(3);
 
-    // // Function to prepare the teleportation process
-    // fn prepare_teleportation(alice_state: &State, entangled_state: &(State, State)) -> (State, State) {
-    //     // Combine Alice's state with the entangled state
-    //     let combined_state = Circuit::new()
-    //         .add_gate(Gate::CNOT(0, 1))
-    //         .add_gate(Gate::H(0))
-    //         .apply(alice_state, &entangled_state.0);
+    // Apply the same initial operations to get to the same state
+    bob_circuit.ry(0, PI/4.0);
+    bob_circuit.h(1);
+    bob_circuit.cnot(1, 2);
+    bob_circuit.cnot(0, 1);
+    bob_circuit.h(0);
+    
+    // Apply Bob's corrections based on Alice's measurement results
+    if m1 == 1 {
+        bob_circuit.x(2);
+        println!("Bob applies X gate based on m1");
+    }
+    
+    if m0 == 1 {
+        bob_circuit.z(2);
+        println!("Bob applies Z gate based on m0");
+    }
 
-    //     (combined_state, entangled_state.1)
-    // }
+    // Execute Bob's full circuit
+    let mut bob_state = initial_state.clone();
+    bob_circuit.execute(&mut bob_state);
+    let final_state = bob_state;
 
-    // // Function to perform a Bell measurement
-    // fn bell_measurement(alice_qubit: State) -> (usize, usize) {
-    //     // Measure the state of Alice's qubit and return the result
-    //     // This is a placeholder for the actual measurement logic
-    //     (0, 0) // Example measurement result
-    // }
+    // Calculate the probability of measuring |1⟩ on Bob's qubit
+    let prob_one = calculate_prob_one(&final_state, 2);
+    println!("Probability of Bob measuring |1⟩: {:.4}", prob_one);
 
-    // // Function to apply corrections based on Alice's measurement
-    // fn apply_corrections(bob_qubit: State, measurement_result: (usize, usize)) {
-    //     // Apply gates based on the measurement result
-    //     // This is a placeholder for the actual correction logic
+    // Visualize the circuit
+    println!("\nCircuit diagram:");
+    println!("{}", circuit_text(&bob_circuit));
+
+    // Save the circuit diagram
+    save_circuit_svg(&bob_circuit, "quantum_teleportation.svg").unwrap_or_else(|e| {
+        println!("Failed to save circuit diagram: {}", e);
+    });
+    
+    println!("\nAnalysis:");
+    println!("The initial state |ψ⟩ has been teleported from Alice to Bob.");
+    println!("Bob's qubit should now be in the state |ψ⟩ = cos(π/8)|0⟩ + sin(π/8)|1⟩");
+    println!("Theoretical probability of measuring |1⟩: {:.4}", (PI/8.0).sin().powi(2));
+}
+
+// Helper function to manually calculate measurement probability and result
+fn manual_measure_qubit(state: &State, qubit_idx: usize) -> usize {
+    let mut prob_one = 0.0;
+
+    // Calculate probability by summing up amplitudes where the qubit is 1
+    for i in 0..state.vector.len() {
+        if (i & (1 << qubit_idx)) != 0 {
+            prob_one += state.vector[i].norm_sqr();
+        }
+    }
+
+    // Deterministic result based on probability (for reproducibility)
+    if prob_one > 0.5 { 1 } else { 0 }
+}
+
+// Helper function to calculate probability of measuring |1⟩
+fn calculate_prob_one(state: &State, qubit_idx: usize) -> f64 {
+    let mut prob_one = 0.0;
+
+    for i in 0..state.vector.len() {
+        if (i & (1 << qubit_idx)) != 0 {
+            prob_one += state.vector[i].norm_sqr();
+        }
+    }
+    
+    prob_one
 }

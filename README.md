@@ -51,18 +51,21 @@ The `examples` directory contains several example files demonstrating how to use
 - **grover_algorithm.rs**: Showcase of Grover's search algorithm.
 
 ## Development Roadmap
-Completed
+#### Completed
 - ✅ Core data structures for quantum gates, states, and circuits
 - ✅ Implementation of basic quantum gates and their operations
 - ✅ Quantum state representation and manipulation
 - ✅ Circuit model for combining gates and executing on states
 - ✅ Circuit visualization tools (text and SVG)
-In Progress
+
+#### In Progress
 - 🚧 Intermediate Representation (IR) for circuit optimization
 - 🚧 State visualization tools
 - 🚧 More quantum algorithms implementations
 - 🚧 Comprehensive testing suite
-Planned
+- 🚧 Page for documentation with example
+
+#### Planned
 - 📅 Noise models and error simulation
 - 📅 Hardware backend interfaces
 - 📅 Advanced optimization techniques
