@@ -5,14 +5,13 @@ use std::f64::consts::PI;
 fn main() {
     println!("Quantum Teleportation Protocol");
     println!("------------------------------");
-    
+
     // Create a circuit with 3 qubits
-    let mut circuit = Circuit::new(3)
-        .with_name("Quantum Teleportation");
+    let mut circuit = Circuit::new(3).with_name("Quantum Teleportation");
 
     // Step 1: Create a state to teleport
     // |ψ⟩ = cos(π/8)|0⟩ + sin(π/8)|1⟩
-    circuit.ry(0, PI/4.0);
+    circuit.ry(0, PI / 4.0);
     println!("Preparing state to teleport: |ψ⟩ = cos(π/8)|0⟩ + sin(π/8)|1⟩");
 
     // Step 2: Create an entangled pair (Bell state) between qubits 1 and 2
@@ -24,7 +23,7 @@ fn main() {
     circuit.cnot(0, 1);
     circuit.h(0);
     println!("Alice performs entanglement operation");
-    
+
     // Create initial state - properly initialized zero state
     let initial_state = State::zero_state(3);
 
@@ -44,18 +43,18 @@ fn main() {
     let mut bob_circuit = Circuit::new(3);
 
     // Apply the same initial operations to get to the same state
-    bob_circuit.ry(0, PI/4.0);
+    bob_circuit.ry(0, PI / 4.0);
     bob_circuit.h(1);
     bob_circuit.cnot(1, 2);
     bob_circuit.cnot(0, 1);
     bob_circuit.h(0);
-    
+
     // Apply Bob's corrections based on Alice's measurement results
     if m1 == 1 {
         bob_circuit.x(2);
         println!("Bob applies X gate based on m1");
     }
-    
+
     if m0 == 1 {
         bob_circuit.z(2);
         println!("Bob applies Z gate based on m0");
@@ -78,11 +77,14 @@ fn main() {
     save_circuit_svg(&bob_circuit, "quantum_teleportation.svg").unwrap_or_else(|e| {
         println!("Failed to save circuit diagram: {}", e);
     });
-    
+
     println!("\nAnalysis:");
     println!("The initial state |ψ⟩ has been teleported from Alice to Bob.");
     println!("Bob's qubit should now be in the state |ψ⟩ = cos(π/8)|0⟩ + sin(π/8)|1⟩");
-    println!("Theoretical probability of measuring |1⟩: {:.4}", (PI/8.0).sin().powi(2));
+    println!(
+        "Theoretical probability of measuring |1⟩: {:.4}",
+        (PI / 8.0).sin().powi(2)
+    );
 }
 
 // Helper function to manually calculate measurement probability and result
@@ -97,7 +99,11 @@ fn manual_measure_qubit(state: &State, qubit_idx: usize) -> usize {
     }
 
     // Deterministic result based on probability (for reproducibility)
-    if prob_one > 0.5 { 1 } else { 0 }
+    if prob_one > 0.5 {
+        1
+    } else {
+        0
+    }
 }
 
 // Helper function to calculate probability of measuring |1⟩
@@ -109,6 +115,6 @@ fn calculate_prob_one(state: &State, qubit_idx: usize) -> f64 {
             prob_one += state.vector[i].norm_sqr();
         }
     }
-    
+
     prob_one
 }
