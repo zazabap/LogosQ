@@ -14,6 +14,7 @@ ndarray = "0.15"  # For numerical operations and state representation
 rand = "0.8"      # For random number generation in algorithms
 thiserror = "1.0" # For error handling
 num-complex = "0.4"  # Add this for complex number support
+approx = "0.5.1"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

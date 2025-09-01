@@ -1,6 +1,7 @@
 use crate::gates::{cnot_gate, cz_gate, swap_gate, toffoli_gate};
 use crate::gates::{h_gate, rx_gate, ry_gate, rz_gate, s_gate, t_gate, x_gate, y_gate, z_gate};
 use crate::gates::{Gate, MatrixGate};
+use crate::noise::NoiseModel;
 use crate::states::State;
 use ndarray::Array2;
 use num_complex::Complex64;
@@ -31,6 +32,8 @@ pub struct Circuit {
     pub num_qubits: usize,
     /// Optional name for the circuit
     pub name: Option<String>,
+    /// Add this field for noise models
+    pub noise_models: Vec<Rc<dyn NoiseModel>>,
 }
 
 impl Circuit {
@@ -40,6 +43,7 @@ impl Circuit {
             operations: Vec::new(),
             num_qubits,
             name: None,
+            noise_models: Vec::new(),
         }
     }
 
@@ -73,8 +77,8 @@ impl Circuit {
         self.add_operation(gate, qubits, name);
     }
 
-    /// Executes the circuit on a given initial state
-    pub fn execute<'a>(&self, initial_state: &'a mut State) -> &'a mut State {
+    /// Executes the circuit on a given initial state (without noise)
+    pub fn execute_without_noise<'a>(&self, initial_state: &'a mut State) -> &'a mut State {
         assert_eq!(
             initial_state.num_qubits, self.num_qubits,
             "Initial state must have the same number of qubits as the circuit"
@@ -236,6 +240,52 @@ impl Circuit {
 
         // For now, add the matrix directly but in the future we can optimize this
         self.add_matrix_gate(gate_matrix, vec![control, target], name);
+    }
+
+    /// Adds a noise model to the circuit
+    pub fn add_noise<N: NoiseModel + 'static>(&mut self, noise_model: N) -> &mut Self {
+        self.noise_models.push(Rc::new(noise_model));
+        self
+    }
+
+    /// Executes the circuit on a given initial state, applying noise if models are present
+    pub fn execute<'a>(&self, initial_state: &'a mut State) -> &'a mut State {
+        assert_eq!(
+            initial_state.num_qubits, self.num_qubits,
+            "Initial state must have the same number of qubits as the circuit"
+        );
+
+        let apply_noise = !self.noise_models.is_empty();
+
+        for operation in &self.operations {
+            // Apply the gate to the state
+            operation.gate.apply(initial_state);
+
+            // Apply noise if enabled
+            if apply_noise {
+                for noise_model in &self.noise_models {
+                    noise_model.apply(initial_state);
+                }
+            }
+        }
+
+        initial_state
+    }
+
+    /// Creates and executes the circuit on a new zero state, with noise
+    pub fn execute_and_measure_with_noise(&self) -> Vec<usize> {
+        let mut state = State::zero_state(self.num_qubits);
+        self.execute(&mut state);
+
+        // Measure each qubit
+        let mut results = Vec::with_capacity(self.num_qubits);
+        let mut state_copy = state.clone();
+
+        for i in 0..self.num_qubits {
+            results.push(state_copy.measure_qubit(i));
+        }
+
+        results
     }
 
     // Convenience methods for common gates
