@@ -107,7 +107,6 @@ impl AmplitudeDampingNoise {
 
 impl NoiseModel for AmplitudeDampingNoise {
     fn apply(&self, state: &mut State) {
-        let mut rng = rand::thread_rng();
         let dimension = state.vector.len();
 
         // Apply noise to specified qubits or all qubits
