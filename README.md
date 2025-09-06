@@ -72,6 +72,7 @@ The `examples` directory contains several example files demonstrating how to use
 
 #### Planned
 - 📅 Hardware backend interfaces
+- 📅 Docker setup for the one-click run test
 - 📅 Advanced optimization techniques
 - 📅 Quantum machine learning modules
 - 📅 Distributed simulation capabilities
