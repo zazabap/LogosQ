@@ -31,7 +31,7 @@ Add LogosQ to your project by adding the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-logosq = "0.1.1"
+logosq = "0.1.3"
 ```
 or clone the repository and navigate to the project directory:
 
@@ -57,16 +57,20 @@ The `examples` directory contains several example files demonstrating how to use
 - ✅ Quantum state representation and manipulation
 - ✅ Circuit model for combining gates and executing on states
 - ✅ Circuit visualization tools (text and SVG)
+- ✅ State visualization tools
 
 #### In Progress
 - 🚧 Intermediate Representation (IR) for circuit optimization
-- 🚧 State visualization tools
 - 🚧 More quantum algorithms implementations
+  - Quantum Fourier Transform
+  - Variational Quantum Circuit
+  - Quantum Gradient Descent
+  -
 - 🚧 Comprehensive testing suite
 - 🚧 Page for documentation with example
+- 🚧 Noise models and error simulation
 
 #### Planned
-- 📅 Noise models and error simulation
 - 📅 Hardware backend interfaces
 - 📅 Advanced optimization techniques
 - 📅 Quantum machine learning modules
@@ -78,3 +82,11 @@ Contributions are welcome! Please open an issue or submit a pull request for any
 
 ## License
 This project is licensed under the MIT License. See the LICENSE file for more details.
+
+## FAQ
+
+1. Some bugs might appear when using the crate, one of the error related with missing package in libfontconfig1-dev, in such case, running on debian/linux (tested on ubuntu) could fix the build error.
+```
+sudo apt-get update
+sudo apt-get install -y libfontconfig1-dev pkg-config
+```
