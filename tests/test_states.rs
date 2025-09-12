@@ -28,6 +28,22 @@ mod tests {
 
         let state = State::new(vector, None);
         assert_eq!(state.num_qubits, 2); // 4 = 2^2 amplitudes
+
+        // Test more than 2 qubits
+        let vector_1 = Array1::from_vec(vec![
+            Complex64::new(1.0, 0.0), // |000⟩
+            Complex64::new(0.0, 0.0), // |001⟩
+            Complex64::new(0.0, 0.0), // |010⟩
+            Complex64::new(0.0, 0.0), // |011⟩
+            Complex64::new(0.0, 0.0), // |100⟩
+            Complex64::new(0.0, 0.0), // |101⟩
+            Complex64::new(0.0, 0.0), // |110⟩
+            Complex64::new(0.0, 0.0), // |111⟩
+        ]);
+
+        let state_1 = State::new(vector_1, Some(3));
+        assert!((state_1.vector[0].norm_sqr() - 1.0).abs() < 1e-10);
+        assert_eq!(state_1.num_qubits, 3); // 8 = 2^3
     }
 
     #[test]
@@ -189,5 +205,24 @@ mod tests {
 
         assert!((state.vector[0] - Complex64::new(1.0, 0.0)).norm() < 1e-10);
         assert!((state.vector[1] - Complex64::new(0.0, 0.0)).norm() < 1e-10);
+    }
+
+    #[test]
+    fn test_print() {
+        let state = State::plus_state(1);
+        let output = state.print();
+        println!("{}", output);
+        assert!(output.contains("State: 1 qubit"));
+        // assert!(output.contains("State: 1 qubit"));
+        assert!(output.contains("|0⟩ : 0.7071+0.0000i (p=0.5000)"));
+        assert!(output.contains("|1⟩ : 0.7071+0.0000i (p=0.5000)"));
+
+        let state = State::bell_state();
+        let output = state.print();
+        // Explicit result for the bell state printout
+        println!("{}", output);
+        assert!(output.contains("State: 2 qubits"));
+        assert!(output.contains("|00⟩ : 0.7071+0.0000i (p=0.5000)"));
+        assert!(output.contains("|11⟩ : 0.7071+0.0000i (p=0.5000)"));
     }
 }

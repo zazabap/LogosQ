@@ -143,6 +143,29 @@ impl State {
             num_qubits: self.num_qubits + other.num_qubits,
         }
     }
+
+    /// A simple print function to display the quantum state
+    pub fn print(&self) -> String {
+        let mut output = format!(
+            "State: {} qubit{}\n",
+            self.num_qubits,
+            if self.num_qubits != 1 { "s" } else { "" }
+        );
+
+        // Show states with non-negligible probability
+        for (i, amplitude) in self.vector.iter().enumerate() {
+            let probability = amplitude.norm_sqr();
+            if probability > 1e-10 {
+                let basis = format!("|{:0width$b}⟩", i, width = self.num_qubits);
+                output.push_str(&format!(
+                    "{} : {:.4}{:+.4}i (p={:.4})\n",
+                    basis, amplitude.re, amplitude.im, probability
+                ));
+            }
+        }
+
+        output
+    }
 }
 
 impl Clone for State {

@@ -65,7 +65,6 @@ The `examples` directory contains several example files demonstrating how to use
   - Quantum Fourier Transform
   - Variational Quantum Circuit
   - Quantum Gradient Descent
-  -
 - 🚧 Comprehensive testing suite
 - 🚧 Page for documentation with example
 - 🚧 Noise models and error simulation
