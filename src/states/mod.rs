@@ -6,6 +6,8 @@ use rand::thread_rng;
 use std::f64::consts::SQRT_2;
 
 /// Represents a quantum state vector using complex amplitudes.
+/// 2^n amplitudes for n qubits.
+
 pub struct State {
     pub vector: Array1<Complex64>,
     pub num_qubits: usize,
