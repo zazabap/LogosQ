@@ -8,8 +8,6 @@ This guide is designed to help developers contribute to LogosQ, a quantum comput
 
 The name λόγος (lógos) comes from Greek meaning "logic."
 
-## Current State of Development
-
 ## Development Roadmap
 #### Completed
 - ✅ Core data structures for quantum gates, states, and circuits
@@ -111,27 +109,6 @@ The name λόγος (lógos) comes from Greek meaning "logic."
 - Include unit tests for new functionality
 - Format your code with `rustfmt`
 - Check your code with `clippy`
-
-## Building Documentation
-
-The documentation is built using Next.js. To run the documentation locally:
-
-1. Navigate to the documentation directory:
-   ```bash
-   cd documentation
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
-
-4. View documentation at [http://localhost:3000](http://localhost:3000)
 
 ## Community
 
