@@ -11,7 +11,7 @@ pub mod xyz_heisenberg;
 
 // Optional: Re-export commonly used functions at the module level
 // for easier access (without having to use the submodule path)
-pub use qft::{create_circuit as create_qft_circuit, apply as apply_qft};
+pub use qft::{apply as apply_qft, create_circuit as create_qft_circuit};
 pub use rqc::generate as generate_random_circuit;
 pub use xyz_heisenberg::simulate as simulate_heisenberg;
 
