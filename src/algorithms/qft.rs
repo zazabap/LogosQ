@@ -54,6 +54,7 @@ pub fn create_inverse_circuit(num_qubits: usize) -> Circuit {
 
 /// Applies the QFT to a quantum state
 pub fn apply(state: &mut State) {
+    println!("Applying QFT to state with {} qubits", state.num_qubits);
     let num_qubits = state.num_qubits;
     let circuit = create_circuit(num_qubits);
     circuit.execute(state);
@@ -68,7 +69,7 @@ pub fn apply_inverse(state: &mut State) {
 
 /// Helper function to apply a controlled phase rotation.
 /// Implements a controlled phase gate with rotation angle.
-fn controlled_phase(circuit: &mut Circuit, control: usize, target: usize, angle: f64) {
+pub fn controlled_phase(circuit: &mut Circuit, control: usize, target: usize, angle: f64) {
     // Decomposition of controlled phase rotation using basic gates
     circuit.rz(control, angle / 2.0);
     circuit.rz(target, angle / 2.0);

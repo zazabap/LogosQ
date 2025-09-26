@@ -5,354 +5,658 @@ use ndarray::Array2;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 
-#[test]
-fn test_circuit_creation() {
-    let circuit = Circuit::new(2);
-    assert_eq!(circuit.num_qubits, 2);
-    assert_eq!(circuit.operations.len(), 0);
-    assert_eq!(circuit.name, None);
+use logosq::vis::circuit::text_diagram;
 
-    let named_circuit = Circuit::new(3).with_name("Test Circuit");
-    assert_eq!(named_circuit.num_qubits, 3);
-    assert_eq!(named_circuit.name, Some("Test Circuit".to_string()));
-}
+mod tests {
+    use super::*;
+    #[test]
+    fn test_circuit_creation() {
+        let circuit = Circuit::new(2);
+        assert_eq!(circuit.num_qubits, 2);
+        assert_eq!(circuit.operations.len(), 0);
+        assert_eq!(circuit.name, None);
 
-#[test]
-fn test_adding_operations() {
-    let mut circuit = Circuit::new(2);
-    let x = x_gate();
+        let named_circuit = Circuit::new(3).with_name("Test Circuit");
+        assert_eq!(named_circuit.num_qubits, 3);
+        assert_eq!(named_circuit.name, Some("Test Circuit".to_string()));
+    }
 
-    // Add X gate to qubit 0
-    circuit.add_operation(x.clone(), vec![0], "X on 0");
-    assert_eq!(circuit.operations.len(), 1);
-    assert_eq!(circuit.operations[0].qubits, vec![0]);
-    assert_eq!(circuit.operations[0].name, "X on 0");
+    #[test]
+    fn test_adding_operations() {
+        let mut circuit = Circuit::new(2);
+        let x = x_gate();
 
-    // Add X gate to qubit 1
-    circuit.add_operation(x.clone(), vec![1], "X on 1");
-    assert_eq!(circuit.operations.len(), 2);
-    assert_eq!(circuit.operations[1].qubits, vec![1]);
-    assert_eq!(circuit.operations[1].name, "X on 1");
-}
+        // Add X gate to qubit 0
+        circuit.add_operation(x.clone(), vec![0], "X on 0");
+        assert_eq!(circuit.operations.len(), 1);
+        assert_eq!(circuit.operations[0].qubits, vec![0]);
+        assert_eq!(circuit.operations[0].name, "X on 0");
 
-#[test]
-#[should_panic(expected = "Qubit index 2 out of range")]
-fn test_invalid_qubit_index() {
-    let mut circuit = Circuit::new(2);
-    let x = x_gate();
+        // Add X gate to qubit 1
+        circuit.add_operation(x.clone(), vec![1], "X on 1");
+        assert_eq!(circuit.operations.len(), 2);
+        assert_eq!(circuit.operations[1].qubits, vec![1]);
+        assert_eq!(circuit.operations[1].name, "X on 1");
+    }
 
-    // This should panic because qubit 2 is out of range for a 2-qubit circuit
-    circuit.add_operation(x, vec![2], "X on 2");
-}
+    #[test]
+    #[should_panic(expected = "Qubit index 2 out of range")]
+    fn test_invalid_qubit_index() {
+        let mut circuit = Circuit::new(2);
+        let x = x_gate();
 
-#[test]
-fn test_execute_circuit() {
-    let mut circuit = Circuit::new(1);
-    let x = x_gate();
+        // This should panic because qubit 2 is out of range for a 2-qubit circuit
+        circuit.add_operation(x, vec![2], "X on 2");
+    }
 
-    // Add X gate to qubit 0
-    circuit.add_operation(x, vec![0], "X on 0");
+    #[test]
+    fn test_execute_circuit() {
+        let mut circuit = Circuit::new(1);
+        let x = x_gate();
 
-    // Execute on |0⟩ state
-    let mut state = State::zero_state(1);
-    circuit.execute(&mut state);
+        // Add X gate to qubit 0
+        circuit.add_operation(x, vec![0], "X on 0");
 
-    // Should be |1⟩ state
-    assert!(state.probability(0) < 1e-10);
-    assert!((state.probability(1) - 1.0).abs() < 1e-10);
-}
+        // Execute on |0⟩ state
+        let mut state = State::zero_state(1);
+        circuit.execute(&mut state);
 
-#[test]
-fn test_bell_state_circuit() {
-    // Circuit to create Bell state |00⟩ + |11⟩ / sqrt(2)
-    let mut circuit = Circuit::new(2);
-    let h = h_gate();
-    let cnot = cnot_gate();
+        // Should be |1⟩ state
+        assert!(state.probability(0) < 1e-10);
+        assert!((state.probability(1) - 1.0).abs() < 1e-10);
+    }
 
-    circuit.add_single_qubit_gate(h.matrix, 0, "H");
-    circuit.add_two_qubit_gate(cnot.matrix, 0, 1, "CNOT");
+    #[test]
+    fn test_bell_state_circuit() {
+        // Circuit to create Bell state |00⟩ + |11⟩ / sqrt(2)
+        let mut circuit = Circuit::new(2);
+        let h = h_gate();
+        let cnot = cnot_gate();
 
-    // Execute on |00⟩ state
-    let mut state = State::zero_state(2);
-    circuit.execute(&mut state);
+        circuit.add_single_qubit_gate(h.matrix, 0, "H");
+        circuit.add_two_qubit_gate(cnot.matrix, 0, 1, "CNOT");
 
-    // Should be Bell state
-    assert!((state.probability(0) - 0.5).abs() < 1e-10);
-    assert!(state.probability(1) < 1e-10);
-    assert!(state.probability(2) < 1e-10);
-    assert!((state.probability(3) - 0.5).abs() < 1e-10);
-}
+        // Execute on |00⟩ state
+        let mut state = State::zero_state(2);
+        circuit.execute(&mut state);
 
-#[test]
-fn test_fluent_bell_state() {
-    // Create Bell state using fluent interface
-    let mut circuit = Circuit::new(2);
-    circuit.h(0).cnot(0, 1);
+        // Should be Bell state
+        assert!((state.probability(0) - 0.5).abs() < 1e-10);
+        assert!(state.probability(1) < 1e-10);
+        assert!(state.probability(2) < 1e-10);
+        assert!((state.probability(3) - 0.5).abs() < 1e-10);
+    }
 
-    // Execute on |00⟩ state
-    let mut state = State::zero_state(2);
-    circuit.execute(&mut state);
+    #[test]
+    fn test_fluent_bell_state() {
+        // Create Bell state using fluent interface
+        let mut circuit = Circuit::new(2);
+        circuit.h(0).cnot(0, 1);
 
-    // Should be Bell state
-    assert!((state.probability(0) - 0.5).abs() < 1e-10);
-    assert!(state.probability(1) < 1e-10);
-    assert!(state.probability(2) < 1e-10);
-    assert!((state.probability(3) - 0.5).abs() < 1e-10);
-}
+        // Execute on |00⟩ state
+        let mut state = State::zero_state(2);
+        circuit.execute(&mut state);
 
-#[test]
-fn test_circuit_composition() {
-    // First circuit: X on qubit 0
-    let mut circuit1 = Circuit::new(2);
-    circuit1.x(0);
+        // Should be Bell state
+        assert!((state.probability(0) - 0.5).abs() < 1e-10);
+        assert!(state.probability(1) < 1e-10);
+        assert!(state.probability(2) < 1e-10);
+        assert!((state.probability(3) - 0.5).abs() < 1e-10);
+    }
 
-    // Second circuit: H on qubit 1
-    let mut circuit2 = Circuit::new(2);
-    circuit2.h(1);
+    #[test]
+    fn test_circuit_composition() {
+        // First circuit: X on qubit 0
+        let mut circuit1 = Circuit::new(2);
+        circuit1.x(0);
 
-    // Compose them
-    circuit1.compose(&circuit2);
-    assert_eq!(circuit1.operations.len(), 2);
+        // Second circuit: H on qubit 1
+        let mut circuit2 = Circuit::new(2);
+        circuit2.h(1);
 
-    // Execute the combined circuit
-    let mut state = State::zero_state(2);
-    circuit1.execute(&mut state);
+        // Compose them
+        circuit1.compose(&circuit2);
+        assert_eq!(circuit1.operations.len(), 2);
 
-    // Should have X on qubit 0 and H on qubit 1
-    // |10⟩ + |11⟩ / sqrt(2)
-    assert!(state.probability(0) < 1e-10);
-    assert!(state.probability(1) < 1e-10);
-    assert!((state.probability(2) - 0.5).abs() < 1e-10);
-    assert!((state.probability(3) - 0.5).abs() < 1e-10);
-}
+        // Execute the combined circuit
+        let mut state = State::zero_state(2);
+        circuit1.execute(&mut state);
 
-#[test]
-fn test_circuit_reversal() {
-    // Create a circuit X -> H on a single qubit
-    let mut circuit = Circuit::new(1);
-    circuit.x(0).h(0);
+        // Should have X on qubit 0 and H on qubit 1
+        // |10⟩ + |11⟩ / sqrt(2)
+        assert!(state.probability(0) < 1e-10);
+        assert!(state.probability(1) < 1e-10);
+        assert!((state.probability(2) - 0.5).abs() < 1e-10);
+        assert!((state.probability(3) - 0.5).abs() < 1e-10);
+    }
 
-    // Reverse it to get H -> X
-    let reversed = circuit.reversed();
-    assert_eq!(reversed.operations.len(), 2);
-    assert_eq!(reversed.operations[0].name, "reversed_H");
-    assert_eq!(reversed.operations[1].name, "reversed_X");
+    #[test]
+    fn test_circuit_reversal() {
+        // Create a circuit X -> H on a single qubit
+        let mut circuit = Circuit::new(1);
+        circuit.x(0).h(0);
 
-    // Execute original circuit on |0⟩
-    let mut state1 = State::zero_state(1);
-    circuit.execute(&mut state1);
+        // Reverse it to get H -> X
+        let reversed = circuit.reversed();
+        assert_eq!(reversed.operations.len(), 2);
+        assert_eq!(reversed.operations[0].name, "reversed_H");
+        assert_eq!(reversed.operations[1].name, "reversed_X");
 
-    // Execute reversed circuit on |0⟩
-    let mut state2 = State::zero_state(1);
-    reversed.execute(&mut state2);
+        // Execute original circuit on |0⟩
+        let mut state1 = State::zero_state(1);
+        circuit.execute(&mut state1);
 
-    // Results should be different
-    assert!((state1.probability(0) - 0.5).abs() < 1e-10);
-    assert!((state1.probability(1) - 0.5).abs() < 1e-10);
+        // Execute reversed circuit on |0⟩
+        let mut state2 = State::zero_state(1);
+        reversed.execute(&mut state2);
 
-    assert!((state2.probability(0) - 0.5).abs() < 1e-10);
-    assert!((state2.probability(1) - 0.5).abs() < 1e-10);
-    // The phases would be different, but probabilities are the same
-}
+        // Results should be different
+        assert!((state1.probability(0) - 0.5).abs() < 1e-10);
+        assert!((state1.probability(1) - 0.5).abs() < 1e-10);
 
-#[test]
-fn test_expectation_value() {
-    // Create a circuit that prepares |+⟩ state
-    let mut circuit = Circuit::new(1);
-    circuit.h(0);
+        assert!((state2.probability(0) - 0.5).abs() < 1e-10);
+        assert!((state2.probability(1) - 0.5).abs() < 1e-10);
+        // The phases would be different, but probabilities are the same
+    }
 
-    // Measure expectation of X operator
-    let x = x_gate();
-    let expectation = circuit.expectation(&x);
+    #[test]
+    fn test_expectation_value() {
+        // Create a circuit that prepares |+⟩ state
+        let mut circuit = Circuit::new(1);
+        circuit.h(0);
 
-    // <+|X|+> = 1
-    assert!((expectation - 1.0).abs() < 1e-10);
+        // Measure expectation of X operator
+        let x = x_gate();
+        let expectation = circuit.expectation(&x);
 
-    // Measure expectation of Z operator
-    let z = z_gate();
-    let expectation = circuit.expectation(&z);
+        // <+|X|+> = 1
+        assert!((expectation - 1.0).abs() < 1e-10);
 
-    // <+|Z|+> = 0
-    assert!(expectation.abs() < 1e-10);
-}
+        // Measure expectation of Z operator
+        let z = z_gate();
+        let expectation = circuit.expectation(&z);
 
-#[test]
-fn test_single_qubit_gates() {
-    let mut circuit = Circuit::new(1);
+        // <+|Z|+> = 0
+        assert!(expectation.abs() < 1e-10);
+    }
 
-    // Test each single-qubit gate method
-    circuit.x(0);
-    circuit.y(0);
-    circuit.z(0);
-    circuit.h(0);
-    circuit.s(0);
-    circuit.t(0);
-    circuit.rx(0, PI / 2.0);
-    circuit.ry(0, PI / 2.0);
-    circuit.rz(0, PI / 2.0);
+    #[test]
+    fn test_single_qubit_gates() {
+        let mut circuit = Circuit::new(1);
 
-    assert_eq!(circuit.operations.len(), 9);
-}
+        // Test each single-qubit gate method
+        circuit.x(0);
+        circuit.y(0);
+        circuit.z(0);
+        circuit.h(0);
+        circuit.s(0);
+        circuit.t(0);
+        circuit.rx(0, PI / 2.0);
+        circuit.ry(0, PI / 2.0);
+        circuit.rz(0, PI / 2.0);
 
-#[test]
-fn test_two_qubit_gates() {
-    let mut circuit = Circuit::new(2);
+        assert_eq!(circuit.operations.len(), 9);
+    }
 
-    // Test each two-qubit gate method
-    circuit.cnot(0, 1);
-    circuit.swap(0, 1);
-    circuit.cz(0, 1);
+    #[test]
+    fn test_two_qubit_gates() {
+        let mut circuit = Circuit::new(2);
 
-    assert_eq!(circuit.operations.len(), 3);
-}
+        // Test each two-qubit gate method
+        circuit.cnot(0, 1);
+        circuit.swap(0, 1);
+        circuit.cz(0, 1);
 
-#[test]
-fn test_toffoli_gate() {
-    let mut circuit = Circuit::new(3);
+        assert_eq!(circuit.operations.len(), 3);
+    }
 
-    // Add Toffoli gate
-    circuit.toffoli(0, 1, 2);
+    #[test]
+    fn test_toffoli_gate() {
+        let mut circuit = Circuit::new(3);
 
-    assert_eq!(circuit.operations.len(), 1);
+        // Add Toffoli gate
+        circuit.toffoli(0, 1, 2);
 
-    // Test with |110⟩ state (should flip to |111⟩)
-    let mut state = State::zero_state(3);
+        assert_eq!(circuit.operations.len(), 1);
 
-    // Apply X to first two qubits to get |110⟩
-    let x = x_gate();
-    let mut prep_circuit = Circuit::new(3);
-    prep_circuit.add_single_qubit_gate(x.matrix.clone(), 0, "X");
-    prep_circuit.add_single_qubit_gate(x.matrix.clone(), 1, "X");
-    prep_circuit.execute(&mut state);
+        // Test with |110⟩ state (should flip to |111⟩)
+        let mut state = State::zero_state(3);
 
-    // Apply Toffoli gate
-    circuit.execute(&mut state);
+        // Apply X to first two qubits to get |110⟩
+        let x = x_gate();
+        let mut prep_circuit = Circuit::new(3);
+        prep_circuit.add_single_qubit_gate(x.matrix.clone(), 0, "X");
+        prep_circuit.add_single_qubit_gate(x.matrix.clone(), 1, "X");
+        prep_circuit.execute(&mut state);
 
-    // Result should be |111⟩
-    assert!(state.probability(7) > 0.99); // 111 in binary = 7 in decimal
-}
+        // Apply Toffoli gate
+        circuit.execute(&mut state);
 
-#[test]
-fn test_ghz_state() {
-    // Create a GHZ state |000⟩ + |111⟩ / sqrt(2)
-    let mut circuit = Circuit::new(3);
+        // Result should be |111⟩
+        assert!(state.probability(7) > 0.99); // 111 in binary = 7 in decimal
+    }
 
-    // Apply H to qubit 0
-    circuit.h(0);
+    #[test]
+    fn test_ghz_state() {
+        // Create a GHZ state |000⟩ + |111⟩ / sqrt(2)
+        let mut circuit = Circuit::new(3);
 
-    // Manually create expanded CNOT(0,1) for a 3-qubit system
-    let mut cnot01_full = Array2::zeros((8, 8));
+        // Apply H to qubit 0
+        circuit.h(0);
 
-    // Identity on states where control qubit 0 is |0⟩
-    cnot01_full[[0, 0]] = Complex64::new(1.0, 0.0);
-    cnot01_full[[1, 1]] = Complex64::new(1.0, 0.0);
-    cnot01_full[[2, 2]] = Complex64::new(1.0, 0.0);
-    cnot01_full[[3, 3]] = Complex64::new(1.0, 0.0);
+        // Manually create expanded CNOT(0,1) for a 3-qubit system
+        let mut cnot01_full = Array2::zeros((8, 8));
 
-    // CNOT action where control qubit 0 is |1⟩
-    cnot01_full[[4, 6]] = Complex64::new(1.0, 0.0); // |100⟩ → |110⟩
-    cnot01_full[[5, 7]] = Complex64::new(1.0, 0.0); // |101⟩ → |111⟩
-    cnot01_full[[6, 4]] = Complex64::new(1.0, 0.0); // |110⟩ → |100⟩
-    cnot01_full[[7, 5]] = Complex64::new(1.0, 0.0); // |111⟩ → |101⟩
+        // Identity on states where control qubit 0 is |0⟩
+        cnot01_full[[0, 0]] = Complex64::new(1.0, 0.0);
+        cnot01_full[[1, 1]] = Complex64::new(1.0, 0.0);
+        cnot01_full[[2, 2]] = Complex64::new(1.0, 0.0);
+        cnot01_full[[3, 3]] = Complex64::new(1.0, 0.0);
 
-    circuit.add_matrix_gate(cnot01_full, vec![0, 1, 2], "CNOT_01");
+        // CNOT action where control qubit 0 is |1⟩
+        cnot01_full[[4, 6]] = Complex64::new(1.0, 0.0); // |100⟩ → |110⟩
+        cnot01_full[[5, 7]] = Complex64::new(1.0, 0.0); // |101⟩ → |111⟩
+        cnot01_full[[6, 4]] = Complex64::new(1.0, 0.0); // |110⟩ → |100⟩
+        cnot01_full[[7, 5]] = Complex64::new(1.0, 0.0); // |111⟩ → |101⟩
 
-    // Manually create expanded CNOT(1,2) for a 3-qubit system
-    let mut cnot12_full = Array2::zeros((8, 8));
+        circuit.add_matrix_gate(cnot01_full, vec![0, 1, 2], "CNOT_01");
 
-    // Identity for states where control qubit 1 is |0⟩
-    cnot12_full[[0, 0]] = Complex64::new(1.0, 0.0);
-    cnot12_full[[1, 1]] = Complex64::new(1.0, 0.0);
-    cnot12_full[[4, 4]] = Complex64::new(1.0, 0.0);
-    cnot12_full[[5, 5]] = Complex64::new(1.0, 0.0);
+        // Manually create expanded CNOT(1,2) for a 3-qubit system
+        let mut cnot12_full = Array2::zeros((8, 8));
 
-    // CNOT action where control qubit 1 is |1⟩
-    cnot12_full[[2, 3]] = Complex64::new(1.0, 0.0); // |010⟩ → |011⟩
-    cnot12_full[[3, 2]] = Complex64::new(1.0, 0.0); // |011⟩ → |010⟩
-    cnot12_full[[6, 7]] = Complex64::new(1.0, 0.0); // |110⟩ → |111⟩
-    cnot12_full[[7, 6]] = Complex64::new(1.0, 0.0); // |111⟩ → |110⟩
+        // Identity for states where control qubit 1 is |0⟩
+        cnot12_full[[0, 0]] = Complex64::new(1.0, 0.0);
+        cnot12_full[[1, 1]] = Complex64::new(1.0, 0.0);
+        cnot12_full[[4, 4]] = Complex64::new(1.0, 0.0);
+        cnot12_full[[5, 5]] = Complex64::new(1.0, 0.0);
 
-    circuit.add_matrix_gate(cnot12_full, vec![0, 1, 2], "CNOT_12");
+        // CNOT action where control qubit 1 is |1⟩
+        cnot12_full[[2, 3]] = Complex64::new(1.0, 0.0); // |010⟩ → |011⟩
+        cnot12_full[[3, 2]] = Complex64::new(1.0, 0.0); // |011⟩ → |010⟩
+        cnot12_full[[6, 7]] = Complex64::new(1.0, 0.0); // |110⟩ → |111⟩
+        cnot12_full[[7, 6]] = Complex64::new(1.0, 0.0); // |111⟩ → |110⟩
 
-    // Execute on |000⟩ state
-    let mut state = State::zero_state(3);
-    circuit.execute(&mut state);
+        circuit.add_matrix_gate(cnot12_full, vec![0, 1, 2], "CNOT_12");
 
-    // Should be GHZ state
-    assert!((state.probability(0) - 0.5).abs() < 1e-10);
-    assert!(state.probability(1) < 1e-10);
-    assert!(state.probability(2) < 1e-10);
-    assert!(state.probability(3) < 1e-10);
-    assert!(state.probability(4) < 1e-10);
-    assert!(state.probability(5) < 1e-10);
-    assert!(state.probability(6) < 1e-10);
-    assert!((state.probability(7) - 0.5).abs() < 1e-10);
-}
+        // Execute on |000⟩ state
+        let mut state = State::zero_state(3);
+        circuit.execute(&mut state);
 
-#[test]
-fn test_execute_and_measure() {
-    // Create a deterministic circuit that always gives |1⟩
-    let mut circuit = Circuit::new(1);
-    circuit.x(0);
+        // Should be GHZ state
+        assert!((state.probability(0) - 0.5).abs() < 1e-10);
+        assert!(state.probability(1) < 1e-10);
+        assert!(state.probability(2) < 1e-10);
+        assert!(state.probability(3) < 1e-10);
+        assert!(state.probability(4) < 1e-10);
+        assert!(state.probability(5) < 1e-10);
+        assert!(state.probability(6) < 1e-10);
+        assert!((state.probability(7) - 0.5).abs() < 1e-10);
+    }
 
-    // Execute and measure
-    let results = circuit.execute_and_measure();
-    assert_eq!(results.len(), 1);
-    assert_eq!(results[0], 1);
+    #[test]
+    fn test_execute_and_measure() {
+        // Create a deterministic circuit that always gives |1⟩
+        let mut circuit = Circuit::new(1);
+        circuit.x(0);
 
-    // Create a circuit that creates an equal superposition
-    let mut circuit = Circuit::new(1);
-    circuit.h(0);
-
-    // Execute and measure multiple times to check probabilistic behavior
-    let mut zeros = 0;
-    let mut ones = 0;
-    for _ in 0..100 {
+        // Execute and measure
         let results = circuit.execute_and_measure();
-        if results[0] == 0 {
-            zeros += 1;
-        } else {
-            ones += 1;
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0], 1);
+
+        // Create a circuit that creates an equal superposition
+        let mut circuit = Circuit::new(1);
+        circuit.h(0);
+
+        // Execute and measure multiple times to check probabilistic behavior
+        let mut zeros = 0;
+        let mut ones = 0;
+        for _ in 0..100 {
+            let results = circuit.execute_and_measure();
+            if results[0] == 0 {
+                zeros += 1;
+            } else {
+                ones += 1;
+            }
+        }
+
+        // Should get roughly equal numbers (allowing some statistical variation)
+        assert!(zeros > 30 && zeros < 70);
+        assert!(ones > 30 && ones < 70);
+    }
+
+    #[test]
+    fn test_circuit_clone() {
+        // Create a circuit with some operations
+        let mut original = Circuit::new(2);
+        original.h(0).cnot(0, 1);
+
+        // Clone it
+        let cloned = original.clone();
+
+        // Check they have the same properties
+        assert_eq!(original.num_qubits, cloned.num_qubits);
+        assert_eq!(original.operations.len(), cloned.operations.len());
+        assert_eq!(original.name, cloned.name);
+
+        // Modify original and check that cloned is unaffected
+        original.x(0);
+        assert_eq!(original.operations.len(), 3);
+        assert_eq!(cloned.operations.len(), 2);
+    }
+
+    #[test]
+    fn test_debug_format() {
+        // Create a simple circuit
+        let mut circuit = Circuit::new(1).with_name("Test Circuit");
+        circuit.x(0).h(0);
+
+        // Get the debug string
+        let debug_str = format!("{:?}", circuit);
+
+        // Check it contains the expected information
+        assert!(debug_str.contains("Test Circuit"));
+        assert!(debug_str.contains("(1 qubits)"));
+        assert!(debug_str.contains("0: X"));
+        assert!(debug_str.contains("1: H"));
+    }
+
+    // Adding test for swap gate functionality
+    // for multiple qubits and ensuring it behaves as expected
+    #[test]
+    fn test_swap_gate_functionality() {
+        // Create a 3-qubit circuit
+        let mut circuit = Circuit::new(3);
+        // Prepare initial state |100⟩ (first qubit is 1)
+        circuit.x(0);
+
+        println!("{}", text_diagram(&circuit));
+
+        // Add a SWAP between qubits 0 and 2
+        circuit.swap(0, 2);
+
+        println!("{}", text_diagram(&circuit));
+
+        // Execute on initial zero state
+        let mut state = State::zero_state(3);
+        circuit.execute(&mut state);
+
+        // Expected result: |001⟩ (third qubit is now 1)
+        assert!(state.probability(0) < 1e-10); // |000⟩
+        assert!(state.probability(1) > 0.99); // |001⟩ (binary 001 = decimal 1)
+        assert!(state.probability(2) < 1e-10); // |010⟩
+        assert!(state.probability(3) < 1e-10); // |011⟩
+        assert!(state.probability(4) < 1e-10); // |100⟩
+        assert!(state.probability(5) < 1e-10); // |101⟩
+        assert!(state.probability(6) < 1e-10); // |110⟩
+        assert!(state.probability(7) < 1e-10); // |111⟩
+
+        // Test that swap is its own inverse
+        let mut inverse_circuit = Circuit::new(3);
+        inverse_circuit.x(0);
+        inverse_circuit.swap(0, 2);
+        inverse_circuit.swap(0, 2); // Apply swap again
+
+        let mut state2 = State::zero_state(3);
+        inverse_circuit.execute(&mut state2);
+
+        // Expected result: |100⟩ (back to original state)
+        assert!(state2.probability(4) > 0.99); // |100⟩ (binary 100 = decimal 4)
+    }
+
+    #[test]
+    fn test_multiple_swap_operations() {
+        // Create a 4-qubit circuit for more complex swap operations
+        let mut circuit = Circuit::new(4);
+
+        // Prepare initial state |1010⟩ (qubits 0 and 2 are 1)
+        circuit.x(0).x(2);
+
+        // Series of SWAP operations
+        circuit
+            .swap(0, 1) // |1010⟩ -> |0110⟩
+            .swap(2, 3) // |0110⟩ -> |0101⟩
+            .swap(1, 2); // |0101⟩ -> |0011⟩
+
+        // Execute circuit
+        let mut state = State::zero_state(4);
+        circuit.execute(&mut state);
+
+        // Expected result: |0011⟩ (binary 0011 = decimal 3)
+        assert!(state.probability(3) > 0.99);
+
+        // Verify all other states have ~0 probability
+        for i in 0..16 {
+            if i != 3 {
+                assert!(
+                    state.probability(i) < 1e-10,
+                    "Unexpected probability for state {}: {}",
+                    i,
+                    state.probability(i)
+                );
+            }
         }
     }
 
-    // Should get roughly equal numbers (allowing some statistical variation)
-    assert!(zeros > 30 && zeros < 70);
-    assert!(ones > 30 && ones < 70);
-}
+    #[test]
+    fn test_swap_entangled_states() {
+        // Test SWAP on entangled states
+        let mut circuit = Circuit::new(3);
 
-#[test]
-fn test_circuit_clone() {
-    // Create a circuit with some operations
-    let mut original = Circuit::new(2);
-    original.h(0).cnot(0, 1);
+        // Create Bell state on qubits 0 and 1
+        circuit.h(0).cnot(0, 1);
+        // Now we have (|00⟩ + |11⟩)/√2 on first two qubits, and |0⟩ on third
 
-    // Clone it
-    let cloned = original.clone();
+        // Swap qubits 1 and 2
+        circuit.swap(1, 2);
 
-    // Check they have the same properties
-    assert_eq!(original.num_qubits, cloned.num_qubits);
-    assert_eq!(original.operations.len(), cloned.operations.len());
-    assert_eq!(original.name, cloned.name);
+        // Execute circuit
+        let mut state = State::zero_state(3);
+        circuit.execute(&mut state);
 
-    // Modify original and check that cloned is unaffected
-    original.x(0);
-    assert_eq!(original.operations.len(), 3);
-    assert_eq!(cloned.operations.len(), 2);
-}
+        // Expected: Bell state now between qubits 0 and 2
+        // State should be (|000⟩ + |101⟩)/√2
+        assert!((state.probability(0) - 0.5).abs() < 1e-10); // |000⟩
+        assert!(state.probability(1) < 1e-10); // |001⟩
+        assert!(state.probability(2) < 1e-10); // |010⟩
+        assert!(state.probability(3) < 1e-10); // |011⟩
+        assert!(state.probability(4) < 1e-10); // |100⟩
+        assert!((state.probability(5) - 0.5).abs() < 1e-10); // |101⟩
+        assert!(state.probability(6) < 1e-10); // |110⟩
+        assert!(state.probability(7) < 1e-10); // |111⟩
+    }
 
-#[test]
-fn test_debug_format() {
-    // Create a simple circuit
-    let mut circuit = Circuit::new(1).with_name("Test Circuit");
-    circuit.x(0).h(0);
+    // Fully test the CNOT gate functionality including edge cases
+    // ensuring it behaves as expected in various scenarios
 
-    // Get the debug string
-    let debug_str = format!("{:?}", circuit);
+    #[test]
+    fn test_cnot_basic_functionality() {
+        // Create a 3-qubit circuit
+        let mut circuit = Circuit::new(3);
+        
+        // Prepare initial state |100⟩ (first qubit is 1)
+        circuit.x(0);
+        
+        // Add CNOT with control=0, target=2 (should flip qubit 2)
+        circuit.cnot(0, 2);
+        
+        // Execute on initial zero state
+        let mut state = State::zero_state(3);
+        circuit.execute(&mut state);
+        
+        // Expected result: |101⟩ (first and third qubits are 1)
+        assert!(state.probability(0) < 1e-10);  // |000⟩
+        assert!(state.probability(1) < 1e-10);  // |001⟩
+        assert!(state.probability(2) < 1e-10);  // |010⟩
+        assert!(state.probability(3) < 1e-10);  // |011⟩
+        assert!(state.probability(4) < 1e-10);  // |100⟩
+        assert!(state.probability(5) > 0.99);   // |101⟩ (binary 101 = decimal 5)
+        assert!(state.probability(6) < 1e-10);  // |110⟩
+        assert!(state.probability(7) < 1e-10);  // |111⟩
+        
+        // Test CNOT with control=0 but now with control qubit in state |0⟩
+        let mut circuit2 = Circuit::new(3);
+        circuit2.x(0);       // Set qubit 0 to |1⟩
+        circuit2.cnot(0, 2); // Flip qubit 2 if qubit 0 is |1⟩
+        circuit2.x(0);       // Flip qubit 0 back to |0⟩
+        circuit2.cnot(0, 2); // Should NOT flip qubit 2 as control is |0⟩
+        
+        let mut state2 = State::zero_state(3);
+        circuit2.execute(&mut state2);
+        
+        // Expected result: |001⟩ (only third qubit is 1, flipped once)
+        assert!(state2.probability(1) > 0.99);  // |001⟩
+    }
 
-    // Check it contains the expected information
-    assert!(debug_str.contains("Test Circuit"));
-    assert!(debug_str.contains("(1 qubits)"));
-    assert!(debug_str.contains("0: X"));
-    assert!(debug_str.contains("1: H"));
+    #[test]
+    fn test_cnot_control_target_order() {
+        // Test that CNOT(a,b) != CNOT(b,a)
+
+        // Case 1: CNOT(0,1)
+        let mut circuit1 = Circuit::new(2);
+        circuit1.x(0);     // Set control to |1⟩
+        circuit1.cnot(0, 1);
+
+        let mut state1 = State::zero_state(2);
+        circuit1.execute(&mut state1);
+
+        // Expected: |11⟩
+        assert!(state1.probability(3) > 0.99);
+
+
+        println!("State1 probabilities: |00⟩: {}, |01⟩: {}, |10⟩: {}, |11⟩: {}",
+                 state1.probability(0), state1.probability(1),
+                 state1.probability(2), state1.probability(3));
+
+        // Case 2: CNOT(1,0)
+        let mut circuit2 = Circuit::new(2);
+        circuit2.x(0);     // Set what will be the target to |1⟩
+        circuit2.cnot(1, 0);
+
+        let mut state2 = State::zero_state(2);
+        circuit2.execute(&mut state2);
+
+        println!("State2 probabilities: |00⟩: {}, |01⟩: {}, |10⟩: {}, |11⟩: {}",
+                 state2.probability(0), state2.probability(1),
+                 state2.probability(2), state2.probability(3));
+
+        // Expected: |00⟩ (target flipped from |1⟩ to |0⟩ because control=0)
+        assert!(state2.probability(1) > 0.99);  // This checks for |10⟩, not |00⟩
+    }
+
+    #[test]
+    fn test_cnot_distant_qubits() {
+        // Create a 5-qubit circuit to test CNOT with distant qubits
+        let mut circuit = Circuit::new(5);
+        
+        // Prepare control qubit 0
+        circuit.x(0);
+        
+        // Apply CNOT between qubits 0 and 4 (the furthest apart)
+        circuit.cnot(0, 4);
+        
+        let mut state = State::zero_state(5);
+        circuit.execute(&mut state);
+        
+        // Expected result: |10001⟩
+        let expected_state = 0b10001;  // Binary 10001 = decimal 17
+        assert!(state.probability(expected_state) > 0.99);
+        
+        // Verify all other states have negligible probability
+        for i in 0..32 {  // 2^5 = 32 possible states
+            if i != expected_state {
+                assert!(state.probability(i) < 1e-10);
+            }
+        }
+    }
+
+    #[test]
+    fn test_cnot_entanglement_creation() {
+        // Test CNOT's ability to create entanglement
+        
+        // Create a circuit to generate a Bell state
+        let mut circuit = Circuit::new(2);
+        circuit.h(0);      // Put qubit 0 in superposition
+        circuit.cnot(0, 1);  // Entangle qubits 0 and 1
+        
+        let mut state = State::zero_state(2);
+        circuit.execute(&mut state);
+        
+        // Expected: |00⟩ + |11⟩ / √2
+        assert!((state.probability(0) - 0.5).abs() < 1e-10);  // |00⟩
+        assert!(state.probability(1) < 1e-10);                // |01⟩
+        assert!(state.probability(2) < 1e-10);                // |10⟩
+        assert!((state.probability(3) - 0.5).abs() < 1e-10);  // |11⟩
+        
+        // Now test with 3 qubits to create a GHZ state
+        let mut ghz_circuit = Circuit::new(3);
+        ghz_circuit.h(0);
+        ghz_circuit.cnot(0, 1);
+        ghz_circuit.cnot(0, 2);  // Control=0, target=2 (non-adjacent)
+        
+        let mut ghz_state = State::zero_state(3);
+        ghz_circuit.execute(&mut ghz_state);
+        
+        // Expected: |000⟩ + |111⟩ / √2
+        assert!((ghz_state.probability(0) - 0.5).abs() < 1e-10);  // |000⟩
+        assert!(ghz_state.probability(1) < 1e-10);                // |001⟩
+        assert!(ghz_state.probability(2) < 1e-10);                // |010⟩
+        assert!(ghz_state.probability(3) < 1e-10);                // |011⟩
+        assert!(ghz_state.probability(4) < 1e-10);                // |100⟩
+        assert!(ghz_state.probability(5) < 1e-10);                // |101⟩
+        assert!(ghz_state.probability(6) < 1e-10);                // |110⟩
+        assert!((ghz_state.probability(7) - 0.5).abs() < 1e-10);  // |111⟩
+    }
+
+    #[test]
+    fn test_cnot_chain() {
+        // Test a chain of CNOT gates
+        let mut circuit = Circuit::new(4);
+        
+        // Put first qubit in superposition
+        circuit.h(0);
+        
+        // Create a chain: qubit i controls qubit i+1
+        circuit.cnot(0, 1)
+               .cnot(1, 2)
+               .cnot(2, 3);
+        
+        let mut state = State::zero_state(4);
+        circuit.execute(&mut state);
+        
+        // Expected: |0000⟩ + |1111⟩ / √2
+        assert!((state.probability(0) - 0.5).abs() < 1e-10);     // |0000⟩
+        assert!((state.probability(15) - 0.5).abs() < 1e-10);    // |1111⟩
+        
+        // All other states should have zero probability
+        for i in 1..15 {
+            assert!(state.probability(i) < 1e-10, 
+                   "Unexpected probability for state {}: {}", 
+                   i, state.probability(i));
+        }
+    }
+
+    #[test]
+    fn test_cnot_with_preexisting_entanglement() {
+        // Create a Bell state on qubits 0 and 1
+        let mut circuit = Circuit::new(3);
+        circuit.h(0).cnot(0, 1);
+        
+        // Add CNOT from entangled qubit 1 to qubit 2
+        circuit.cnot(1, 2);
+        
+        let mut state = State::zero_state(3);
+        circuit.execute(&mut state);
+        
+        // Expected: |000⟩ + |111⟩ / √2
+        // (Qubit 2 is flipped only when qubit 1 is |1⟩, which happens when qubit 0 is |1⟩)
+        assert!((state.probability(0) - 0.5).abs() < 1e-10);  // |000⟩
+        assert!(state.probability(1) < 1e-10);                // |001⟩
+        assert!(state.probability(2) < 1e-10);                // |010⟩
+        assert!(state.probability(3) < 1e-10);                // |011⟩
+        assert!(state.probability(4) < 1e-10);                // |100⟩
+        assert!(state.probability(5) < 1e-10);                // |101⟩
+        assert!(state.probability(6) < 1e-10);                // |110⟩
+        assert!((state.probability(7) - 0.5).abs() < 1e-10);  // |111⟩
+    }
 }
