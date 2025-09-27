@@ -2,6 +2,8 @@
 
 use crate::circuits::Circuit;
 use crate::states::State;
+use ndarray::Array2;
+use num_complex::Complex64;
 use std::f64::consts::PI;
 
 /// Creates a Quantum Fourier Transform circuit for the specified number of qubits.
@@ -70,10 +72,33 @@ pub fn apply_inverse(state: &mut State) {
 /// Helper function to apply a controlled phase rotation.
 /// Implements a controlled phase gate with rotation angle.
 pub fn controlled_phase(circuit: &mut Circuit, control: usize, target: usize, angle: f64) {
-    // Decomposition of controlled phase rotation using basic gates
-    circuit.rz(control, angle / 2.0);
-    circuit.rz(target, angle / 2.0);
-    circuit.cnot(control, target);
-    circuit.rz(target, -angle / 2.0);
-    circuit.cnot(control, target);
+    // Direct implementation of controlled phase gate
+    let full_dim = 1 << circuit.num_qubits;
+    let mut matrix = Array2::zeros((full_dim, full_dim));
+
+    // Convert qubit indices to bit positions (MSB = 0, LSB = n-1)
+    let control_bit = circuit.num_qubits - 1 - control;
+    let target_bit = circuit.num_qubits - 1 - target;
+
+    // Fill the matrix
+    for i in 0..full_dim {
+        // Extract control and target bits
+        let control_val = (i >> control_bit) & 1;
+        let target_val = (i >> target_bit) & 1;
+
+        // Apply phase only when both control and target are 1
+        let phase = if control_val == 1 && target_val == 1 {
+            Complex64::from_polar(1.0, angle)
+        } else {
+            Complex64::new(1.0, 0.0)
+        };
+
+        matrix[[i, i]] = phase;
+    }
+
+    circuit.add_matrix_gate(
+        matrix,
+        (0..circuit.num_qubits).collect(),
+        &format!("CP({:.4})", angle),
+    );
 }
