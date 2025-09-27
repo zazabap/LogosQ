@@ -438,7 +438,7 @@ impl Circuit {
         for i in 0..full_dim {
             // Extract control bit
             let control_val = (i >> control_bit) & 1;
-            
+
             if control_val == 0 {
                 // If control is 0, leave state unchanged
                 full_matrix[[i, i]] = Complex64::new(1.0, 0.0);
@@ -481,7 +481,7 @@ impl Circuit {
             // Extract bits for the qubits
             let bit1 = (i >> bit_pos1) & 1;
             let bit2 = (i >> bit_pos2) & 1;
-            
+
             if bit1 == bit2 {
                 // If bits are the same, no change needed
                 full_matrix[[i, i]] = Complex64::new(1.0, 0.0);
@@ -524,7 +524,7 @@ impl Circuit {
             // Extract control and target bits
             let control_val = (i >> control_bit) & 1;
             let target_val = (i >> target_bit) & 1;
-            
+
             if control_val == 1 && target_val == 1 {
                 // If both are 1, apply phase -1
                 full_matrix[[i, i]] = Complex64::new(-1.0, 0.0);
