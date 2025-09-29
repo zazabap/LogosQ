@@ -4,6 +4,7 @@ use num_complex::Complex64;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::thread_rng;
 use std::f64::consts::SQRT_2;
+use rayon::prelude::*;
 
 /// Represents a quantum state vector using complex amplitudes.
 /// 2^n amplitudes for n qubits.
@@ -167,6 +168,45 @@ impl State {
         }
 
         output
+    }
+
+    // Parallel measurement for multiple shots
+    pub fn measure_shots_parallel(&self, n_shots: usize) -> std::collections::HashMap<usize, usize> {
+        let results: Vec<usize> = (0..n_shots)
+            .into_par_iter()
+            .map(|_| self.measure())
+            .collect();
+
+        let mut counts = std::collections::HashMap::new();
+        for result in results {
+            *counts.entry(result).or_insert(0) += 1;
+        }
+        counts
+    }
+    
+    // Parallel state normalization
+    pub fn normalize_parallel(&mut self) {
+        let norm = self.vector
+            .par_iter()
+            .map(|c| c.norm_sqr())
+            .sum::<f64>()
+            .sqrt();
+
+        if norm > 1e-10 {
+            self.vector.par_mapv_inplace(|c| c / norm);
+        }
+    }
+
+    // Parallel state inner product
+    pub fn inner_product_parallel(&self, other: &State) -> Complex64 {
+        use ndarray::Zip;
+        assert_eq!(self.vector.len(), other.vector.len());
+
+        Zip::from(&self.vector)
+            .and(&other.vector)
+            .par_map_collect(|a, b| a.conj() * b)
+            .into_iter()
+            .sum()
     }
 }
 

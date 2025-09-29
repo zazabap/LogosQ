@@ -10,12 +10,14 @@ homepage = "https://logosqbook.vercel.app"
 description = "This project is a quantum computing library developed in Rust, inspired by existing libraries such as QPP in C++, Yao.jl in Julia, and Pennylane in Python. "
 
 [dependencies]
-ndarray = "0.15"  # For numerical operations and state representation
+ndarray = { version = "0.15", features = ["rayon"] }
 rand = "0.8"      # For random number generation in algorithms
 thiserror = "1.0" # For error handling
 num-complex = "0.4"  # Add this for complex number support
 approx = "0.5.1"
 plotters = "0.3.7"
+rayon = "1.7"               # Add this for parallel computing
+ndarray-parallel = "0.9"    # Optional: for better ndarray integration
 
 [lib]
 crate-type = ["cdylib", "rlib"]
