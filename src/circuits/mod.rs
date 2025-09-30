@@ -3,6 +3,7 @@ use crate::noise::NoiseModel;
 use crate::states::State;
 use ndarray::Array2;
 use num_complex::Complex64;
+use rayon::prelude::*;
 use std::fmt;
 use std::rc::Rc;
 
@@ -99,13 +100,17 @@ impl Circuit {
         let mut state = State::zero_state(self.num_qubits);
         self.execute(&mut state);
 
-        // Measure each qubit
-        let mut results = Vec::with_capacity(self.num_qubits);
-        for i in 0..self.num_qubits {
-            results.push(state.measure_qubit(i));
-        }
+        // Make a copy of the state for parallel measurements
+        let state_copy = state.clone();
 
-        results
+        // Measure each qubit in parallel
+        (0..self.num_qubits)
+            .into_par_iter()
+            .map(|i| {
+                let mut local_state = state_copy.clone();
+                local_state.measure_qubit(i)
+            })
+            .collect()
     }
 
     /// Calculates the expectation value of an observable
@@ -117,13 +122,12 @@ impl Circuit {
         let mut obs_state = state.clone();
         observable.apply(&mut obs_state);
 
-        // Calculate expectation value as <ψ|O|ψ>
-        let mut expectation = Complex64::new(0.0, 0.0);
-        for i in 0..state.vector.len() {
-            expectation += state.vector[i].conj() * obs_state.vector[i];
-        }
-
-        expectation.re // Return the real part
+        // Calculate expectation value as <ψ|O|ψ> using parallel reduction
+        (0..state.vector.len())
+            .into_par_iter()
+            .map(|i| state.vector[i].conj() * obs_state.vector[i])
+            .reduce(|| Complex64::new(0.0, 0.0), |a, b| a + b)
+            .re // Return the real part
     }
 
     /// Composes this circuit with another circuit
@@ -199,15 +203,17 @@ impl Circuit {
         let mut state = State::zero_state(self.num_qubits);
         self.execute(&mut state);
 
-        // Measure each qubit
-        let mut results = Vec::with_capacity(self.num_qubits);
-        let mut state_copy = state.clone();
+        // Make a copy of the state for parallel measurements
+        let state_copy = state.clone();
 
-        for i in 0..self.num_qubits {
-            results.push(state_copy.measure_qubit(i));
-        }
-
-        results
+        // Measure each qubit in parallel
+        (0..self.num_qubits)
+            .into_par_iter()
+            .map(|i| {
+                let mut local_state = state_copy.clone();
+                local_state.measure_qubit(i)
+            })
+            .collect()
     }
 }
 

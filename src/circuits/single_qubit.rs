@@ -1,8 +1,8 @@
+use super::utils::tensor_product;
+use super::Circuit;
 use crate::gates::{h_gate, rx_gate, ry_gate, rz_gate, s_gate, t_gate, x_gate, y_gate, z_gate};
 use ndarray::Array2;
 use num_complex::Complex64;
-use super::Circuit;
-use super::utils::tensor_product;
 
 impl Circuit {
     /// Applies a single-qubit gate to a specific qubit in the circuit.

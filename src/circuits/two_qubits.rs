@@ -1,7 +1,11 @@
+use super::Circuit;
 use crate::gates::{cnot_gate, cz_gate, swap_gate, toffoli_gate};
 use ndarray::Array2;
 use num_complex::Complex64;
-use super::Circuit;
+
+// Import rayon conditionally
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
 
 impl Circuit {
     /// Adds a two-qubit gate to the circuit
@@ -111,7 +115,31 @@ impl Circuit {
         let control_bit = self.num_qubits - 1 - control;
         let target_bit = self.num_qubits - 1 - target;
 
-        // Iterate through all basis states
+        // Parallelize for large matrices
+        #[cfg(feature = "parallel")]
+        if full_dim > 1024 {
+            // Rayon cannot mutate full_matrix in parallel directly.
+            // Instead, build a vector of (row, col, value) tuples in parallel, then apply them sequentially.
+            let updates: Vec<(usize, usize, Complex64)> = (0..full_dim)
+                .into_par_iter()
+                .map(|i| {
+                    let control_val = (i >> control_bit) & 1;
+                    if control_val == 0 {
+                        (i, i, Complex64::new(1.0, 0.0))
+                    } else {
+                        let j = i ^ (1 << target_bit);
+                        (j, i, Complex64::new(1.0, 0.0))
+                    }
+                })
+                .collect();
+            for (row, col, val) in updates {
+                full_matrix[[row, col]] = val;
+            }
+            self.add_matrix_gate(full_matrix, (0..self.num_qubits).collect(), "CNOT");
+            return self;
+        }
+
+        // Sequential implementation for smaller matrices or when parallel feature is disabled
         for i in 0..full_dim {
             // Extract control bit
             let control_val = (i >> control_bit) & 1;

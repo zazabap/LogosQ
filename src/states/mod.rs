@@ -4,8 +4,9 @@ use num_complex::Complex64;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::thread_rng;
 use std::f64::consts::SQRT_2;
-use rayon::prelude::*;
 
+// conditional compilation for parallel features
+use rayon::prelude::*;
 /// Represents a quantum state vector using complex amplitudes.
 /// 2^n amplitudes for n qubits.
 
@@ -28,11 +29,17 @@ impl State {
         state
     }
 
-    /// Normalizes the state vector.
+    // Parallel state normalization
     pub fn normalize(&mut self) {
-        let norm = self.vector.mapv(|x| x.norm_sqr()).sum().sqrt();
+        let norm = self
+            .vector
+            .par_iter()
+            .map(|c| c.norm_sqr())
+            .sum::<f64>()
+            .sqrt();
+
         if norm > 1e-10 {
-            self.vector.mapv_inplace(|x| x / norm);
+            self.vector.par_mapv_inplace(|c| c / norm);
         }
     }
 
@@ -121,6 +128,23 @@ impl State {
         result
     }
 
+    // Parallel measurement for multiple shots
+    pub fn measure_shots_parallel(
+        &self,
+        n_shots: usize,
+    ) -> std::collections::HashMap<usize, usize> {
+        let results: Vec<usize> = (0..n_shots)
+            .into_par_iter()
+            .map(|_| self.measure())
+            .collect();
+
+        let mut counts = std::collections::HashMap::new();
+        for result in results {
+            *counts.entry(result).or_insert(0) += 1;
+        }
+        counts
+    }
+
     /// Calculates probability of measuring a particular basis state.
     pub fn probability(&self, basis_state: usize) -> f64 {
         if basis_state >= self.vector.len() {
@@ -168,33 +192,6 @@ impl State {
         }
 
         output
-    }
-
-    // Parallel measurement for multiple shots
-    pub fn measure_shots_parallel(&self, n_shots: usize) -> std::collections::HashMap<usize, usize> {
-        let results: Vec<usize> = (0..n_shots)
-            .into_par_iter()
-            .map(|_| self.measure())
-            .collect();
-
-        let mut counts = std::collections::HashMap::new();
-        for result in results {
-            *counts.entry(result).or_insert(0) += 1;
-        }
-        counts
-    }
-    
-    // Parallel state normalization
-    pub fn normalize_parallel(&mut self) {
-        let norm = self.vector
-            .par_iter()
-            .map(|c| c.norm_sqr())
-            .sum::<f64>()
-            .sqrt();
-
-        if norm > 1e-10 {
-            self.vector.par_mapv_inplace(|c| c / norm);
-        }
     }
 
     // Parallel state inner product
