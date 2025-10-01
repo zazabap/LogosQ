@@ -3,6 +3,7 @@ use logosq::algorithms::qft;
 use logosq::circuits::Circuit;
 use logosq::states::State;
 use std::f64::consts::PI;
+use logosq::vis::circuit_text;
 
 mod tests {
     use super::*;
@@ -15,10 +16,11 @@ mod tests {
         // Check circuit properties
         assert_eq!(circuit.num_qubits, num_qubits);
         assert!(circuit.name.is_some());
-        assert!(circuit.name.unwrap().contains("Quantum Fourier Transform"));
+        assert!(circuit.name.as_ref().unwrap().contains("Quantum Fourier Transform"));
 
         // Verify circuit has operations (specific count depends on implementation)
         assert!(!circuit.operations.is_empty());
+        println!("QFT Circuit:\n{}", circuit_text(&circuit));
     }
 
     #[test]
