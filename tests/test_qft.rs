@@ -6,6 +6,8 @@ use std::f64::consts::PI;
 use logosq::vis::circuit_text;
 
 mod tests {
+    use num_complex::Complex64;
+
     use super::*;
 
     #[test]
@@ -72,6 +74,8 @@ mod tests {
         assert_relative_eq!(state.vector[1].re, -1.0 / 2.0_f64.sqrt(), epsilon = 1e-5);
         assert_relative_eq!(state.vector[1].im, 0.0, epsilon = 1e-5);
     }
+
+
 
     #[test]
     fn test_qft_inverse_qft_identity() {
@@ -274,6 +278,132 @@ mod tests {
             }
 
             println!("  ✓ {}-qubit zero state QFT verified", num_qubits);
+        }
+    }
+
+    #[test]
+    fn test_qft_implementation_comparison() {
+        // Test comparison of circuit-based QFT and direct FFT implementation
+        println!("Comparing circuit-based QFT with direct FFT implementation:");
+        
+        // Test for different qubit sizes
+        for num_qubits in 1..=6 {  // Keeping reasonable size for test time
+            println!("  Testing {}-qubit state comparison", num_qubits);
+            
+            // Create a non-trivial initial state
+            let mut prep_state = State::zero_state(num_qubits);
+            let mut prep_circuit = Circuit::new(num_qubits);
+            
+            // Apply some gates to create a test state
+            for i in 0..num_qubits {
+                if i % 2 == 0 {
+                    prep_circuit.h(i);
+                } else {
+                    prep_circuit.x(i);
+                }
+                // Add some phase variation
+                if i > 0 && i % 2 == 1 {
+                    prep_circuit.rz(i, PI / (i as f64 + 1.0));
+                }
+            }
+            prep_circuit.execute(&mut prep_state);
+            
+            // Create two identical copies of the prepared state
+            let mut circuit_state = prep_state.clone();
+            let mut direct_state = prep_state.clone();
+            
+            // Apply QFT using both methods
+            qft::apply(&mut circuit_state);    // Circuit-based implementation
+            qft::apply_(&mut direct_state);    // Direct FFT implementation
+            circuit_state.print();
+            direct_state.print();
+            // Compare the resulting states
+            let n = circuit_state.vector.len();
+            let mut max_diff_re: f64 = 0.0;
+            let mut max_diff_im: f64 = 0.0;
+            
+            for i in 0..n {
+                let diff_re = (circuit_state.vector[i].re - direct_state.vector[i].re).abs();
+                let diff_im = (circuit_state.vector[i].im - direct_state.vector[i].im).abs();
+
+                max_diff_re = max_diff_re.max(diff_re);
+                max_diff_im = max_diff_im.max(diff_im);
+
+                // Compare real parts
+                assert_relative_eq!(
+                    circuit_state.vector[i].re,
+                    direct_state.vector[i].re,
+                    epsilon = 1e-5,
+                    max_relative = 1e-4
+                );
+                
+                // Compare imaginary parts
+                assert_relative_eq!(
+                    circuit_state.vector[i].im,
+                    direct_state.vector[i].im,
+                    epsilon = 1e-5,
+                    max_relative = 1e-4
+                );
+            }
+            
+            println!("  ✓ {}-qubit state: implementations match (max diff: re={:.2e}, im={:.2e})", 
+                num_qubits, max_diff_re, max_diff_im);
+        }
+    }
+
+    #[test]
+    fn test_qft_apply_underscore_on_zero_state() {
+        // Test the direct FFT implementation (apply_) on |0⟩ state thoroughly
+        println!("Testing qft::apply_() on |0⟩ states with varying qubit counts:");
+
+        for num_qubits in 1..=8 {
+            println!("  Testing {}-qubit zero state with apply_()", num_qubits);
+
+            // Create zero state
+            let mut state_ = State::zero_state(num_qubits);
+            let mut state = state_.clone();
+
+            // Apply direct FFT implementation
+            qft::apply_(&mut state_);
+            qft::apply(&mut state);
+
+            // Compare results
+            assert_eq!(state_.vector.len(), state.vector.len());
+            assert_relative_eq!(state_.vector[0].re, state.vector[0].re, epsilon = 1e-10, max_relative = 1e-9);
+            assert_relative_eq!(state_.vector[0].im, state.vector[0].im, epsilon = 1e-10, max_relative = 1e-9);
+
+
+            // Expected result: equal superposition with all real, positive amplitudes
+            let n = state.vector.len();
+            let expected_magnitude = 1.0 / (n as f64).sqrt();
+
+            // Verify all amplitudes have correct magnitude
+            for i in 0..n {
+                assert_relative_eq!(
+                    state.vector[i].re,
+                    expected_magnitude,
+                    epsilon = 1e-10,
+                    max_relative = 1e-9
+                );
+            }
+
+            // QFT on |0⟩ should result in all real, positive amplitudes
+            for i in 0..n {
+                assert_relative_eq!(state.vector[i].im, 0.0, epsilon = 1e-10);
+                assert!(state.vector[i].re > 0.0, "Amplitude {} should be positive, got {}", i, state.vector[i].re);
+                assert_relative_eq!(
+                    state.vector[i].re,
+                    expected_magnitude,
+                    epsilon = 1e-10,
+                    max_relative = 1e-9
+                );
+            }
+
+            // Verify normalization
+            let total_prob: f64 = state.vector.iter().map(|c| c.norm_sqr()).sum();
+            assert_relative_eq!(total_prob, 1.0, epsilon = 1e-10);
+
+            println!("  ✓ {}-qubit zero state apply_() verified", num_qubits);
         }
     }
 }

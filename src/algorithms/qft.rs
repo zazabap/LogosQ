@@ -6,6 +6,67 @@ use ndarray::Array2;
 use num_complex::Complex64;
 use rayon::prelude::*;
 use std::f64::consts::PI;
+use crate::algorithms::cobra::cobra_apply;
+use crate::algorithms::qftkernels::dit::{
+    fft_dit_64_chunk_n_simd,
+    fft_dit_chunk_16_simd_f64, fft_dit_chunk_2,
+    fft_dit_chunk_32_simd_f64, fft_dit_chunk_4_simd_f64, fft_dit_chunk_64_simd_f64,
+    fft_dit_chunk_8_simd_f64,
+};
+
+/// Reverse is for running the Inverse Fast Fourier Transform (IFFT)
+/// Forward is for running the regular FFT
+#[derive(Copy, Clone)]
+pub enum Direction {
+    /// Leave the exponent term in the twiddle factor alone
+    Forward = 1,
+    /// Multiply the exponent term in the twiddle factor by -1
+    Reverse = -1,
+}
+
+/// Simple planner for DIT FFT algorithm
+pub struct DitPlanner {
+    /// Twiddles for each stage that needs them (stages with chunk_size > 64)
+    pub stage_twiddles: Vec<(Vec<f64>, Vec<f64>)>,
+    /// The direction of the FFT
+    pub direction: Direction,
+}
+
+impl DitPlanner {
+    /// Create a new DIT planner for an FFT of size `num_points`
+    pub fn new(num_points: usize, direction: Direction) -> Self {
+        assert!(num_points > 0 && num_points.is_power_of_two());
+
+        let log_n = num_points.ilog2() as usize;
+        let mut stage_twiddles = Vec::new();
+
+        // Pre-compute twiddles for each stage that needs them
+        for stage in 0..log_n {
+            let dist = 1 << stage;
+            let chunk_size = dist << 1;
+
+            // Only stages with chunk_size > 64 need twiddles (we have SIMD kernels up to 64)
+            if chunk_size > 64 {
+                let mut twiddles_re = vec![0.0f64; dist];
+                let mut twiddles_im = vec![0.0f64; dist];
+
+                let angle_mult = -2.0 * std::f64::consts::PI / chunk_size as f64;
+                for k in 0..dist {
+                    let angle = angle_mult * k as f64;
+                    twiddles_re[k] = angle.cos();
+                    twiddles_im[k] = angle.sin();
+                }
+
+                stage_twiddles.push((twiddles_re, twiddles_im));
+            }
+        }
+
+        Self {
+            stage_twiddles,
+            direction,
+        }
+    }
+}
 
 /// Creates a Quantum Fourier Transform circuit for the specified number of qubits.
 pub fn create_circuit(num_qubits: usize) -> Circuit {
@@ -70,8 +131,147 @@ pub fn apply_inverse(state: &mut State) {
     circuit.execute(state);
 }
 
-/// Helper function to apply a controlled phase rotation.
-/// Implements a controlled phase gate with rotation angle.
+/// Options to tune to improve performance depending on the hardware and input size.
+
+/// Calling FFT routines without specifying options will automatically select reasonable defaults
+/// depending on the input size and other factors.
+///
+/// You only need to tune these options if you are trying to squeeze maximum performance
+/// out of a known hardware platform that you can benchmark at varying input sizes.
+#[non_exhaustive]
+#[derive(Debug, Clone)]
+pub struct Options {
+    pub multithreaded_bit_reversal: bool,
+    pub dif_perform_bit_reversal: bool,
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Self {
+            multithreaded_bit_reversal: false,
+            dif_perform_bit_reversal: true,
+        }
+    }
+}
+
+impl Options {
+    pub fn guess_options(input_size: usize) -> Options {
+        let mut options = Options::default();
+        let n: usize = input_size.ilog2() as usize;
+        options.multithreaded_bit_reversal = n >= 22;
+        options
+    }
+}
+
+/// FFT implementation using DIT algorithm with options
+pub fn fft_64_dit_with_opts(reals: &mut [f64], imags: &mut [f64], direction: Direction, opts: &Options) {
+    assert_eq!(reals.len(), imags.len());
+    assert!(reals.len().is_power_of_two());
+    let n = reals.len();
+    let log_n = n.ilog2() as usize;
+
+
+    println!("FFT input: n={}, first few values: [{:.4}, {:.4}...]", n, reals[0], reals[1]);
+
+    // DIT requires bit-reversed input
+    if opts.multithreaded_bit_reversal {
+        std::thread::scope(|s| {
+            s.spawn(|| cobra_apply(reals, log_n));
+            s.spawn(|| cobra_apply(imags, log_n));
+        });
+    } else {
+        cobra_apply(reals, log_n);
+        cobra_apply(imags, log_n);
+    }
+
+    println!("After bit reversal: [{:.4}, {:.4}...]", reals[0], reals[1]);
+
+
+    // Create planner for twiddle factors
+    let planner = DitPlanner::new(n, direction);
+
+    // Handle inverse FFT
+    if let Direction::Reverse = planner.direction {
+        for z_im in imags.iter_mut() {
+            *z_im = -*z_im;
+        }
+    }
+
+    let mut stage_twiddle_idx = 0;
+    for stage in 0..log_n {
+        let dist = 1 << stage;
+        let chunk_size = dist << 1;
+
+        if chunk_size == 2 {
+            fft_dit_chunk_2(reals, imags);
+        } else if chunk_size == 4 {
+            fft_dit_chunk_4_simd_f64(reals, imags);
+        } else if chunk_size == 8 {
+            fft_dit_chunk_8_simd_f64(reals, imags);
+        } else if chunk_size == 16 {
+            fft_dit_chunk_16_simd_f64(reals, imags);
+        } else if chunk_size == 32 {
+            fft_dit_chunk_32_simd_f64(reals, imags);
+        } else if chunk_size == 64 {
+            fft_dit_chunk_64_simd_f64(reals, imags);
+        } else {
+            // For larger chunks, use general kernel with twiddles from planner
+            let (twiddles_re, twiddles_im) = &planner.stage_twiddles[stage_twiddle_idx];
+            fft_dit_64_chunk_n_simd(reals, imags, twiddles_re, twiddles_im, dist);
+            stage_twiddle_idx += 1;
+        }
+    }
+
+    // Scaling for inverse transform
+    if let Direction::Reverse = planner.direction {
+        let scaling_factor = 1.0 / n as f64;
+        for (z_re, z_im) in reals.iter_mut().zip(imags.iter_mut()) {
+            *z_re *= scaling_factor;
+            *z_im *= -scaling_factor;
+        }
+    }
+}
+
+/// Core function that applies QFT using PhastFFT library
+pub fn apply_(state: &mut State) {
+    // Convert state vector to format suitable for FFT
+    let n = state.vector.len();
+    assert!(n.is_power_of_two(), "State vector length must be a power of two");
+    
+    // Extract real and imaginary parts from the quantum state
+    let mut reals: Vec<f64> = state.vector.iter().map(|c| c.re).collect();
+    let mut imags: Vec<f64> = state.vector.iter().map(|c| c.im).collect();
+
+    // Apply FFT in-place with optimized options
+    let opts = Options::guess_options(n);
+    fft_64_dit_with_opts(&mut reals, &mut imags, Direction::Forward, &opts);
+
+    // Update state vector with transformed values
+    for i in 0..n {
+        state.vector[i] = Complex64::new(reals[i], imags[i]);
+    }
+}
+
+/// Apply inverse QFT directly using FFT algorithm
+pub fn apply_inverse_(state: &mut State) {
+    // Convert state vector to format suitable for FFT
+    let n = state.vector.len();
+    assert!(n.is_power_of_two(), "State vector length must be a power of two");
+    
+    // Extract real and imaginary parts from the quantum state
+    let mut reals: Vec<f64> = state.vector.iter().map(|c| c.re).collect();
+    let mut imags: Vec<f64> = state.vector.iter().map(|c| c.im).collect();
+
+    // Apply inverse FFT in-place with optimized options
+    let opts = Options::guess_options(n);
+    fft_64_dit_with_opts(&mut reals, &mut imags, Direction::Reverse, &opts);
+    
+    // Update state vector with transformed values
+    for i in 0..n {
+        state.vector[i] = Complex64::new(reals[i], imags[i]);
+    }
+}
+
 pub fn controlled_phase(circuit: &mut Circuit, control: usize, target: usize, angle: f64) {
     // Direct implementation of controlled phase gate
     let full_dim = 1 << circuit.num_qubits;

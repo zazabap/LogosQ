@@ -5,6 +5,8 @@
 
 // Declare and re-export each algorithm module
 pub mod qft;
+pub mod cobra;
+pub mod qftkernels;
 pub mod rqc;
 pub mod xyz_heisenberg;
 

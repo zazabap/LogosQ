@@ -18,6 +18,8 @@ approx = "0.5.1"
 plotters = "0.3.7"
 # Make rayon optional so it can be used in feature flags
 rayon = { version = "1.8.0", optional = true }
+num-traits = "0.2.19"
+wide = "0.8.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
