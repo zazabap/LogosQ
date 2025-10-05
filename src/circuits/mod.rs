@@ -13,11 +13,8 @@ mod utils;
 
 /// A quantum operation with an associated gate and target qubits
 pub struct Operation {
-    /// The gate to apply
     pub gate: Rc<dyn Gate>,
-    /// The indices of qubits the gate acts on
     pub qubits: Vec<usize>,
-    /// Optional name for the operation (useful for debugging)
     pub name: String,
 }
 
@@ -29,13 +26,9 @@ impl fmt::Debug for Operation {
 
 /// Represents a quantum circuit with operations and measurement
 pub struct Circuit {
-    /// Operations to apply in sequence
     pub operations: Vec<Operation>,
-    /// Total number of qubits in the circuit
     pub num_qubits: usize,
-    /// Optional name for the circuit
     pub name: Option<String>,
-    /// Add this field for noise models
     pub noise_models: Vec<Rc<dyn NoiseModel>>,
 }
 

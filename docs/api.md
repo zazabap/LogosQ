@@ -45,7 +45,6 @@ The `states` module manages quantum states.
 #### Functions
 
 - `fn initialize(size: usize) -> State`: Initializes a quantum state of the given size.
-- `fn apply_gate(&mut self, gate: &Gate)`: Applies a gate to the quantum state.
 
 ### Algorithms
 
@@ -76,22 +75,7 @@ The `utils` module contains utility functions and types.
 
 ## Usage Example
 
-```rust
-use logosq::gates::{pauli_x, hadamard, cnot};
-use logosq::circuits::Circuit;
-use logosq::states::State;
-
-fn main() {
-    let mut circuit = Circuit::new();
-    let initial_state = State::initialize(2);
-    
-    circuit.add_gate(hadamard());
-    circuit.add_gate(cnot(0, 1));
-    
-    let final_state = initial_state.apply_gate(&circuit);
-    let measurement = circuit.measure(1);
-}
-```
+check the example folder in the library. 
 
 ## Conclusion
 
