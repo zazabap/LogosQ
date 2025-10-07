@@ -1,5 +1,5 @@
 use super::Circuit;
-use crate::gates::{cnot_gate, cz_gate, swap_gate, toffoli_gate};
+use crate::gates::{cnot_gate, cz_gate, swap_gate};
 use ndarray::Array2;
 use num_complex::Complex64;
 
@@ -240,14 +240,6 @@ impl Circuit {
         }
 
         self.add_matrix_gate(full_matrix, (0..self.num_qubits).collect(), "CZ");
-        self
-    }
-
-    /// Adds a Toffoli gate to the circuit
-    pub fn toffoli(&mut self, control1: usize, control2: usize, target: usize) -> &mut Self {
-        let toffoli = toffoli_gate();
-        // For now, we'll just add the matrix directly
-        self.add_matrix_gate(toffoli.matrix, vec![control1, control2, target], "Toffoli");
         self
     }
 }
