@@ -1,7 +1,6 @@
 use logosq::circuits::Circuit;
 use logosq::states::State;
 
-
 mod tests {
     use super::*;
     #[test]
@@ -42,7 +41,6 @@ mod tests {
         // Expected result: |001⟩ (only third qubit is 1, flipped once)
         assert!(state2.probability(1) > 0.99); // |001⟩
     }
-
 
     #[test]
     fn test_cnot_control_target_order() {

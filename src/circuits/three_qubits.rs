@@ -43,7 +43,7 @@ impl Circuit {
                     // Clear the diagonal entries for i and j
                     full_matrix[[i, i]] = Complex64::new(0.0, 0.0);
                     full_matrix[[j, j]] = Complex64::new(0.0, 0.0);
-                    
+
                     // Set the swap entries
                     full_matrix[[i, j]] = Complex64::new(1.0, 0.0);
                     full_matrix[[j, i]] = Complex64::new(1.0, 0.0);
@@ -53,7 +53,7 @@ impl Circuit {
 
         // Apply to all qubits (the matrix already encodes which qubits are affected)
         self.add_matrix_gate(full_matrix, (0..self.num_qubits).collect(), "Toffoli");
-        
+
         self
     }
 }

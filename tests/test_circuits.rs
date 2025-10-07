@@ -98,7 +98,6 @@ mod tests {
         // Then create Bell state
         circuit.add_single_qubit_gate(h.matrix, 0, "H");
 
-
         circuit.add_two_qubit_gate(cnot.matrix, 0, 1, "CNOT");
 
         // Execute on |00⟩ state

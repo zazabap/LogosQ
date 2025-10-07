@@ -5,7 +5,7 @@ use logosq::vis::circuit::text_diagram;
 
 mod tests {
     use super::*;
-       // Adding test for swap gate functionality
+    // Adding test for swap gate functionality
     // for multiple qubits and ensuring it behaves as expected
     #[test]
     fn test_swap_gate_functionality() {
@@ -81,5 +81,4 @@ mod tests {
             }
         }
     }
-
 }

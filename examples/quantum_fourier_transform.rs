@@ -12,7 +12,6 @@ fn main() {
 }
 // how to combine algorithms
 pub fn quantum_fourier_transform_example(num_qubits: usize) -> Vec<usize> {
-
     let mut state = State::zero_state(num_qubits);
     // Create a circuit that demonstrates QFT
     let mut circuit = Circuit::new(num_qubits);
@@ -27,8 +26,7 @@ pub fn quantum_fourier_transform_example(num_qubits: usize) -> Vec<usize> {
     circuit.execute_and_measure()
 }
 
-
-pub fn qft_c2 (){
+pub fn qft_c2() {
     let num_qubits = 3; // Example with 3 qubits
     let circuit = Circuit::new(num_qubits);
     // circuit.compose(&qft::create_circuit(num_qubits));

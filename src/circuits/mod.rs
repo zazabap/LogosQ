@@ -8,8 +8,8 @@ use std::fmt;
 use std::rc::Rc;
 
 mod single_qubit;
-mod two_qubits;
 mod three_qubits;
+mod two_qubits;
 mod utils;
 
 /// A quantum operation with an associated gate and target qubits
