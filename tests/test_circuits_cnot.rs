@@ -48,14 +48,14 @@ mod tests {
 
         // Case 1: CNOT(0,1)
         let mut circuit1 = Circuit::new(2);
-        circuit1.x(0); // Set control to |1⟩
-        circuit1.cnot(0, 1);
+        circuit1.x(0); // Set control to |1⟩ → state is |10⟩
+        circuit1.cnot(0, 1); // control=0 is |1⟩, so flip target (qubit 1)
 
         let mut state1 = State::zero_state(2);
         circuit1.execute(&mut state1);
 
-        // Expected: |11⟩
-        assert!(state1.probability(3) > 0.99);
+        // Expected: |11⟩ (both qubits are 1)
+        assert!(state1.probability(3) > 0.99); // |11⟩ = decimal 3
 
         println!(
             "State1 probabilities: |00⟩: {}, |01⟩: {}, |10⟩: {}, |11⟩: {}",
@@ -67,8 +67,8 @@ mod tests {
 
         // Case 2: CNOT(1,0)
         let mut circuit2 = Circuit::new(2);
-        circuit2.x(0); // Set what will be the target to |1⟩
-        circuit2.cnot(1, 0);
+        circuit2.x(0); // Set qubit 0 to |1⟩ → state is |10⟩
+        circuit2.cnot(1, 0); // control=1 is |0⟩, so do NOT flip target (qubit 0)
 
         let mut state2 = State::zero_state(2);
         circuit2.execute(&mut state2);
@@ -81,8 +81,27 @@ mod tests {
             state2.probability(3)
         );
 
-        // Expected: |00⟩ (target flipped from |1⟩ to |0⟩ because control=0)
-        assert!(state2.probability(1) > 0.99); // This checks for |10⟩, not |00⟩
+        // Expected: |10⟩ (target NOT flipped because control=0)
+        assert!(state2.probability(2) > 0.99); // |10⟩ = decimal 2
+    }
+
+    #[test]
+    fn test_cnot_hadamard() {
+        // Test CNOT in combination with Hadamard to create entanglement
+
+        // Create a 2-qubit circuit
+        let mut circuit = Circuit::new(2);
+        circuit.h(0); // Put qubit 0 in superposition
+        circuit.cnot(0, 1); // Entangle qubits 0 and 1
+
+        let mut state = State::zero_state(2);
+        circuit.execute(&mut state);
+
+        // Expected: |00⟩ + |11⟩ / √2
+        assert!((state.probability(0) - 0.5).abs() < 1e-10); // |00⟩
+        assert!(state.probability(1) < 1e-10); // |01⟩
+        assert!(state.probability(2) < 1e-10); // |10⟩
+        assert!((state.probability(3) - 0.5).abs() < 1e-10); // |11⟩
     }
 
     #[test]
