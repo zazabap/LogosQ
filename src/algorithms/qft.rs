@@ -1,10 +1,8 @@
 // Quantum Fourier Transform implementation
 
 use crate::circuits::Circuit;
+use crate::gates::optimized::ControlledPhaseGate;
 use crate::states::State;
-use ndarray::Array2;
-use num_complex::Complex64;
-use rayon::prelude::*;
 use std::f64::consts::PI;
 
 /// Creates a Quantum Fourier Transform circuit for the specified number of qubits.
@@ -71,63 +69,14 @@ pub fn apply_inverse(state: &mut State) {
 }
 
 /// Helper function to apply a controlled phase rotation.
-/// Implements a controlled phase gate with rotation angle.
+/// Adds an optimized ControlledPhaseGate instead of building a full matrix.
 pub fn controlled_phase(circuit: &mut Circuit, control: usize, target: usize, angle: f64) {
-    // Direct implementation of controlled phase gate
-    let full_dim = 1 << circuit.num_qubits;
-    let mut matrix = Array2::zeros((full_dim, full_dim));
+    let gate = ControlledPhaseGate {
+        control,
+        target,
+        angle,
+        num_qubits: circuit.num_qubits,
+    };
 
-    // Convert qubit indices to bit positions (MSB = 0, LSB = n-1)
-    let control_bit = circuit.num_qubits - 1 - control;
-    let target_bit = circuit.num_qubits - 1 - target;
-
-    // Fill the matrix in parallel for large matrices
-    if full_dim > 256 {
-        // Parallel matrix filling for large matrices
-        // Create a vector of updates in parallel
-        let updates: Vec<(usize, Complex64)> = (0..full_dim)
-            .into_par_iter()
-            .map(|i| {
-                // Extract control and target bits
-                let control_val = (i >> control_bit) & 1;
-                let target_val = (i >> target_bit) & 1;
-
-                // Calculate the phase
-                let phase = if control_val == 1 && target_val == 1 {
-                    Complex64::from_polar(1.0, angle)
-                } else {
-                    Complex64::new(1.0, 0.0)
-                };
-
-                (i, phase)
-            })
-            .collect();
-
-        // Apply updates sequentially
-        for (i, phase) in updates {
-            matrix[[i, i]] = phase;
-        }
-    } else {
-        // Sequential for small matrices to avoid parallelism overhead
-        for i in 0..full_dim {
-            // Extract control and target bits
-            let control_val = (i >> control_bit) & 1;
-            let target_val = (i >> target_bit) & 1;
-
-            // Apply phase only when both control and target are 1
-            let phase = if control_val == 1 && target_val == 1 {
-                Complex64::from_polar(1.0, angle)
-            } else {
-                Complex64::new(1.0, 0.0)
-            };
-
-            matrix[[i, i]] = phase;
-        }
-    }
-
-    circuit.add_matrix_gate(
-        matrix,
-        (0..circuit.num_qubits).collect(),
-        &format!("CP({:.4})", angle),
-    );
+    circuit.add_operation(gate, vec![control, target], &format!("CP({:.4})", angle));
 }

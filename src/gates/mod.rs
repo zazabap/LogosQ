@@ -126,6 +126,54 @@ pub mod optimized {
         }
     }
 
+    /// Optimized Controlled-Phase (CP) gate: applies exp(i * angle) when control=1 and target=1
+    pub struct ControlledPhaseGate {
+        pub control: usize,
+        pub target: usize,
+        pub angle: f64,
+        pub num_qubits: usize,
+    }
+
+    impl Gate for ControlledPhaseGate {
+        fn apply(&self, state: &mut State) {
+            let n = state.num_qubits;
+            let control_bit = n - 1 - self.control;
+            let target_bit = n - 1 - self.target;
+
+            let control_mask = 1 << control_bit;
+            let target_mask = 1 << target_bit;
+            let both_mask = control_mask | target_mask;
+
+            let full_dim = 1 << n;
+            let vector_slice = state.vector.as_slice_mut().unwrap();
+            let phase = Complex64::from_polar(1.0, self.angle);
+
+            // Parallel path when enabled and dimension is large
+            #[cfg(feature = "parallel")]
+            {
+                if full_dim > 1024 {
+                    use rayon::prelude::*;
+
+                    vector_slice
+                        .par_iter_mut()
+                        .enumerate()
+                        .filter(|(i, _)| (*i & both_mask) == both_mask)
+                        .for_each(|(_, val)| {
+                            *val = *val * phase;
+                        });
+                    return;
+                }
+            }
+
+            // Sequential fallback
+            for i in 0..full_dim {
+                if (i & both_mask) == both_mask {
+                    vector_slice[i] = vector_slice[i] * phase;
+                }
+            }
+        }
+    }
+
     /// Optimized Toffoli gate
     pub struct ToffoliGate {
         pub control1: usize,
