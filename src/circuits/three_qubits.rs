@@ -1,5 +1,5 @@
 use super::Circuit;
-use crate::gates::optimized::ToffoliGate;
+use crate::gates::three_qubit::ToffoliGate;
 
 impl Circuit {
     /// Adds a Toffoli gate to the circuit - OPTIMIZED

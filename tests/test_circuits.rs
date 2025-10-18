@@ -1,5 +1,5 @@
 use logosq::circuits::Circuit;
-use logosq::gates::*;
+use logosq::gates::matrix::*;
 use logosq::states::State;
 use ndarray::Array2;
 use num_complex::Complex64;
