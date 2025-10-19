@@ -1,5 +1,5 @@
 use super::Circuit;
-use crate::gates::optimized::{CNOTGate, CZGate, SWAPGate};
+use crate::gates::two_qubit::{CNOTGate, CZGate, SWAPGate};
 use ndarray::Array2;
 use num_complex::Complex64;
 

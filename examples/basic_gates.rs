@@ -1,36 +1,17 @@
 // This file demonstrates the usage of the quantum computing library to create and manipulate basic quantum gates.
 
 use logosq::circuits::Circuit;
-use logosq::gates::{cnot_gate, h_gate, x_gate, Gate};
+use logosq::gates::matrix::{cnot_gate, h_gate};
 use logosq::states::State;
 
 fn main() {
     // Create single-qubit gates
     println!("Creating basic quantum gates:");
-    let x = x_gate();
     let h = h_gate();
     println!("Created basic gates: X, H, Z");
 
     // Demonstrate gates on quantum states
     println!("\nDemonstrating gate operations:");
-
-    // X gate flips |0⟩ to |1⟩
-    let mut state = State::zero_state(1);
-    println!("Initial state: |0⟩");
-    println!("Probability of |0⟩: {:.4}", state.probability(0));
-    println!("Probability of |1⟩: {:.4}", state.probability(1));
-
-    x.apply(&mut state);
-    println!("\nAfter X gate:");
-    println!("Probability of |0⟩: {:.4}", state.probability(0));
-    println!("Probability of |1⟩: {:.4}", state.probability(1));
-
-    // Hadamard creates superposition
-    let mut state = State::zero_state(1);
-    h.apply(&mut state);
-    println!("\nAfter H gate on |0⟩:");
-    println!("Probability of |0⟩: {:.4}", state.probability(0));
-    println!("Probability of |1⟩: {:.4}", state.probability(1));
 
     // Building a Bell state circuit
     println!("\nCreating a Bell state:");

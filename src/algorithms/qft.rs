@@ -1,7 +1,7 @@
 // Quantum Fourier Transform implementation - optimized with FFT
 
 use crate::circuits::Circuit;
-use crate::gates::optimized::ControlledPhaseGate;
+use crate::gates::two_qubit::CPhaseGate;
 use crate::states::State;
 use rustfft::FftPlanner;
 use std::f64::consts::PI;
@@ -92,9 +92,9 @@ pub fn apply_inverse(state: &mut State) {
 }
 
 /// Helper function to apply a controlled phase rotation.
-/// Adds an optimized ControlledPhaseGate instead of building a full matrix.
+/// Adds an optimized CPhaseGate instead of building a full matrix.
 pub fn controlled_phase(circuit: &mut Circuit, control: usize, target: usize, angle: f64) {
-    let gate = ControlledPhaseGate {
+    let gate = CPhaseGate {
         control,
         target,
         angle,
