@@ -7,7 +7,6 @@
 //! similar to the optimized gate implementations.
 
 use super::*;
-use std::f64::consts::PI;
 
 // ============================================================================
 // ENUMS AND HELPERS
