@@ -1,7 +1,5 @@
 use logosq::circuits::Circuit;
-use logosq::gates::matrix::{
-    cnot_gate, h_gate, rz_gate, swap_gate, toffoli_gate, x_gate,
-};
+use logosq::gates::matrix::{cnot_gate, h_gate, rz_gate, swap_gate, toffoli_gate, x_gate};
 
 use logosq::vis::{circuit_text, save_circuit_svg};
 // Use the trait methods
@@ -54,24 +52,12 @@ fn main() -> std::io::Result<()> {
     // QFT implementation
     // Qubit 0
     qft_circuit.add_operation(h_gate(), vec![0], "H");
-    qft_circuit.add_operation(
-        rz_gate(std::f64::consts::PI / 2.0),
-        vec![1, 0],
-        "Rz(π/2)",
-    );
-    qft_circuit.add_operation(
-        rz_gate(std::f64::consts::PI / 4.0),
-        vec![2, 0],
-        "Rz(π/4)",
-    );
+    qft_circuit.add_operation(rz_gate(std::f64::consts::PI / 2.0), vec![1, 0], "Rz(π/2)");
+    qft_circuit.add_operation(rz_gate(std::f64::consts::PI / 4.0), vec![2, 0], "Rz(π/4)");
 
     // Qubit 1
     qft_circuit.add_operation(h_gate(), vec![1], "H");
-    qft_circuit.add_operation(
-        rz_gate(std::f64::consts::PI / 2.0),
-        vec![2, 1],
-        "Rz(π/2)",
-    );
+    qft_circuit.add_operation(rz_gate(std::f64::consts::PI / 2.0), vec![2, 1], "Rz(π/2)");
 
     // Qubit 2
     qft_circuit.add_operation(h_gate(), vec![2], "H");

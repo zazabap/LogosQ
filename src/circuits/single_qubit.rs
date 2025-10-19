@@ -1,6 +1,8 @@
 use super::utils::tensor_product;
 use super::Circuit;
-use crate::gates::matrix::{h_gate, rx_gate, ry_gate, rz_gate, s_gate, t_gate, x_gate, y_gate, z_gate};
+use crate::gates::matrix::{
+    h_gate, rx_gate, ry_gate, rz_gate, s_gate, t_gate, x_gate, y_gate, z_gate,
+};
 use ndarray::Array2;
 use num_complex::Complex64;
 
@@ -102,21 +104,21 @@ impl Circuit {
     }
 
     /// Adds an Rx gate to the circuit
-    pub fn rx(&mut self, qubit: usize, theta: f64) -> &mut Self {
+    pub fn rx_matrix(&mut self, qubit: usize, theta: f64) -> &mut Self {
         let rx = rx_gate(theta);
         self.add_single_qubit_gate(rx.matrix, qubit, &format!("RX({})", theta));
         self
     }
 
     /// Adds an Ry gate to the circuit
-    pub fn ry(&mut self, qubit: usize, theta: f64) -> &mut Self {
+    pub fn ry_matrix(&mut self, qubit: usize, theta: f64) -> &mut Self {
         let ry = ry_gate(theta);
         self.add_single_qubit_gate(ry.matrix, qubit, &format!("RY({})", theta));
         self
     }
 
     /// Adds an Rz gate to the circuit
-    pub fn rz(&mut self, qubit: usize, theta: f64) -> &mut Self {
+    pub fn rz_matrix(&mut self, qubit: usize, theta: f64) -> &mut Self {
         let rz = rz_gate(theta);
         self.add_single_qubit_gate(rz.matrix, qubit, &format!("RZ({})", theta));
         self

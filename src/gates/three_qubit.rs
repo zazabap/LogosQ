@@ -35,12 +35,7 @@ impl Gate for ToffoliGate {
 }
 
 /// Convenience function
-pub fn toffoli(
-    control1: usize,
-    control2: usize,
-    target: usize,
-    num_qubits: usize,
-) -> ToffoliGate {
+pub fn toffoli(control1: usize, control2: usize, target: usize, num_qubits: usize) -> ToffoliGate {
     ToffoliGate {
         control1,
         control2,

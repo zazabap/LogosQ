@@ -7,6 +7,7 @@ use rayon::prelude::*;
 use std::fmt;
 use std::rc::Rc;
 
+mod parameterized;
 mod single_qubit;
 mod three_qubits;
 mod two_qubits;

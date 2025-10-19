@@ -40,32 +40,23 @@ impl Gate for MatrixGate {
 }
 
 // Module declarations
-pub mod matrix;           // Matrix-based implementations
-pub mod single_qubit;    // Optimized single-qubit gates
-pub mod two_qubit;       // Optimized two-qubit gates
-pub mod three_qubit;     // Optimized three-qubit gates
-pub mod parameterized;   // Parameterized gates for VQC
-pub mod utils;           // Helper functions
+pub mod matrix; // Matrix-based implementations
+pub mod parameterized; // Parameterized gates for VQC
+pub mod single_qubit; // Optimized single-qubit gates
+pub mod three_qubit; // Optimized three-qubit gates
+pub mod two_qubit; // Optimized two-qubit gates
+pub mod utils; // Helper functions
 
 // Re-exports for convenience
-pub use single_qubit::*;
-pub use two_qubit::*;
-pub use three_qubit::*;
 pub use parameterized::*;
+pub use single_qubit::*;
+pub use three_qubit::*;
+pub use two_qubit::*;
 
 // Matrix-based gates (prefixed to avoid conflicts)
 pub use matrix::{
-    x_gate as matrix_x,
-    y_gate as matrix_y,
+    cnot_gate as matrix_cnot, cz_gate as matrix_cz, h_gate as matrix_h, rx_gate as matrix_rx,
+    ry_gate as matrix_ry, rz_gate as matrix_rz, s_gate as matrix_s, swap_gate as matrix_swap,
+    t_gate as matrix_t, toffoli_gate as matrix_toffoli, x_gate as matrix_x, y_gate as matrix_y,
     z_gate as matrix_z,
-    h_gate as matrix_h,
-    s_gate as matrix_s,
-    t_gate as matrix_t,
-    rx_gate as matrix_rx,
-    ry_gate as matrix_ry,
-    rz_gate as matrix_rz,
-    cnot_gate as matrix_cnot,
-    swap_gate as matrix_swap,
-    cz_gate as matrix_cz,
-    toffoli_gate as matrix_toffoli,
 };

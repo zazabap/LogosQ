@@ -21,8 +21,8 @@ pub use crate::states::State;
 // ============================================================================
 
 pub use crate::gates::matrix::{
-    cnot_gate, cz_gate, h_gate, rx_gate, ry_gate, rz_gate, s_gate, swap_gate, t_gate,
-    toffoli_gate, x_gate, y_gate, z_gate,
+    cnot_gate, cz_gate, h_gate, rx_gate, ry_gate, rz_gate, s_gate, swap_gate, t_gate, toffoli_gate,
+    x_gate, y_gate, z_gate,
 };
 
 // ============================================================================
@@ -30,13 +30,6 @@ pub use crate::gates::matrix::{
 // ============================================================================
 
 pub use crate::gates::single_qubit::{
-    // Gate structs
-    HGate,
-    SGate,
-    TGate,
-    XGate,
-    YGate,
-    ZGate,
     // Convenience constructors
     h,
     s,
@@ -44,6 +37,13 @@ pub use crate::gates::single_qubit::{
     x,
     y,
     z,
+    // Gate structs
+    HGate,
+    SGate,
+    TGate,
+    XGate,
+    YGate,
+    ZGate,
 };
 
 // ============================================================================
@@ -51,16 +51,16 @@ pub use crate::gates::single_qubit::{
 // ============================================================================
 
 pub use crate::gates::two_qubit::{
-    // Gate structs
-    CNOTGate,
-    CPhaseGate,
-    CZGate,
-    SWAPGate,
     // Convenience constructors
     cnot,
     cphase,
     cz,
     swap,
+    // Gate structs
+    CNOTGate,
+    CPhaseGate,
+    CZGate,
+    SWAPGate,
 };
 
 // ============================================================================
@@ -68,10 +68,10 @@ pub use crate::gates::two_qubit::{
 // ============================================================================
 
 pub use crate::gates::three_qubit::{
-    // Gate structs
-    ToffoliGate,
     // Convenience constructor
     toffoli,
+    // Gate structs
+    ToffoliGate,
 };
 
 // ============================================================================
@@ -102,9 +102,7 @@ pub use crate::gates::three_qubit::{
 // GATE UTILITIES
 // ============================================================================
 
-pub use crate::gates::utils::{
-    flip_qubit, is_qubit_set, qubit_bit_position, qubit_mask,
-};
+pub use crate::gates::utils::{flip_qubit, is_qubit_set, qubit_bit_position, qubit_mask};
 
 // ============================================================================
 // ALGORITHMS (uncomment when implemented)

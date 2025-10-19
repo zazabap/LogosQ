@@ -145,6 +145,10 @@ impl State {
         counts
     }
 
+    pub fn probabilities(&self) -> Vec<f64> {
+        self.vector.mapv(|c| c.norm_sqr()).to_vec()
+    }
+
     /// Calculates probability of measuring a particular basis state.
     pub fn probability(&self, basis_state: usize) -> f64 {
         if basis_state >= self.vector.len() {
