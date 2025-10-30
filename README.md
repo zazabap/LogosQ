@@ -19,7 +19,7 @@ Add LogosQ to your project by adding the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-logosq = "0.1.11"
+logosq = "0.1.12"
 ```
 or clone the repository and navigate to the project directory:
 
