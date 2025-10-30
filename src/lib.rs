@@ -8,6 +8,7 @@ pub mod algorithms;
 pub mod circuits;
 pub mod gates;
 pub mod noise;
+pub mod optimization;
 pub mod prelude;
 pub mod states;
 pub mod utils;

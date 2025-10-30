@@ -10,6 +10,7 @@ use rayon::prelude::*;
 /// Represents a quantum state vector using complex amplitudes.
 /// 2^n amplitudes for n qubits.
 
+#[derive(Debug)]
 pub struct State {
     pub vector: Array1<Complex64>,
     pub num_qubits: usize,
