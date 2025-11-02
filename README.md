@@ -36,6 +36,9 @@ The `examples` directory contains several example files demonstrating how to use
 
 Because LogosQ is written in Rust, the memory safety is the biggest advantage over the other library, and could be verified through benchmark. Please also feel free to checkout the [benchmark](https://github.com/zazabap/LogosQBenchmarks) we have compare with the Pennylane and other library! 
 
+## Feature 
+The most important feature comes from the implementation on the parameter shift rules and the ansatz structure, where such feature is rarely implemented for quantum computing library in Rust! You could create a parameterized ansatz/quantum circuit that helps you find out the optimal solution. Here are some basic instruction to create Variational Quantum Eigensolver, Quantum Natural Gradient and Ansatz in [Optimization Module](https://logosqbook.vercel.app/docs/modules/Optimization). 
+
 ## Contributing
 Contributions are welcome! Please open an issue or submit a pull request for any enhancements or bug fixes. For further details, please check the DevGuide.md
 
