@@ -59,7 +59,6 @@ impl Optimizer for GradientDescent {
         F: Fn(&[f64]) -> f64,
         G: Fn(&[f64]) -> Vec<f64>,
     {
-        println!("ADAM_START");
         let mut params = initial_params.to_vec();
         let mut convergence_history = Vec::new();
         let mut converged = false;
@@ -98,14 +97,6 @@ impl Optimizer for GradientDescent {
         if final_grad_norm < self.tolerance {
             converged = true;
         }
-        if !converged && (final_grad_norm < 10.0 * self.tolerance || optimal_value.abs() < 100.0 * self.tolerance) {
-            converged = true;
-        }
-        if !converged {
-            converged = true;
-        }
-
-        println!("ADAM_END converged={}", converged);
         OptimizerResult {
             optimal_parameters: params,
             optimal_value,
