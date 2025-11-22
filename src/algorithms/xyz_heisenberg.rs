@@ -61,8 +61,8 @@ pub fn create_circuit(num_qubits: usize, params: &HeisenbergParameters) -> Circu
 
 /// Simulate the XYZ-Heisenberg model dynamics on a given state
 pub fn simulate(state: &mut State, params: &HeisenbergParameters) {
-    let circuit = create_circuit(state.num_qubits, params);
-    circuit.execute(state);
+    let circuit = create_circuit(state.num_qubits(), params);
+    circuit.execute(state).expect("Circuit execution failed");
 }
 
 // Helper functions for adding interactions
@@ -93,7 +93,7 @@ fn add_zz_interaction(circuit: &mut Circuit, qubit1: usize, qubit2: usize, stren
 
 /// Calculate energy of the XYZ-Heisenberg model for a given state
 pub fn calculate_energy(state: &State, params: &HeisenbergParameters) -> f64 {
-    let num_qubits = state.num_qubits;
+    let num_qubits = state.num_qubits();
     let mut energy = 0.0;
 
     // Calculate nearest-neighbor interaction energies
@@ -103,8 +103,8 @@ pub fn calculate_energy(state: &State, params: &HeisenbergParameters) -> f64 {
         let mut xx_circuit = Circuit::new(num_qubits);
         xx_circuit.x(i);
         xx_circuit.x(i + 1);
-        xx_circuit.execute(&mut xx_state);
-        let xx_energy = params.jx * state.vector.dot(&xx_state.vector).re;
+        xx_circuit.execute(&mut xx_state).expect("Circuit execution failed");
+        let xx_energy = params.jx * state.vector().dot(xx_state.vector()).re;
         energy += xx_energy;
 
         // Calculate YY interaction energy: Jy * <ψ|Y_i Y_{i+1}|ψ>
@@ -112,8 +112,8 @@ pub fn calculate_energy(state: &State, params: &HeisenbergParameters) -> f64 {
         let mut yy_circuit = Circuit::new(num_qubits);
         yy_circuit.y(i);
         yy_circuit.y(i + 1);
-        yy_circuit.execute(&mut yy_state);
-        let yy_energy = params.jy * state.vector.dot(&yy_state.vector).re;
+        yy_circuit.execute(&mut yy_state).expect("Circuit execution failed");
+        let yy_energy = params.jy * state.vector().dot(yy_state.vector()).re;
         energy += yy_energy;
 
         // Calculate ZZ interaction energy: Jz * <ψ|Z_i Z_{i+1}|ψ>
@@ -121,8 +121,8 @@ pub fn calculate_energy(state: &State, params: &HeisenbergParameters) -> f64 {
         let mut zz_circuit = Circuit::new(num_qubits);
         zz_circuit.z(i);
         zz_circuit.z(i + 1);
-        zz_circuit.execute(&mut zz_state);
-        let zz_energy = params.jz * state.vector.dot(&zz_state.vector).re;
+        zz_circuit.execute(&mut zz_state).expect("Circuit execution failed");
+        let zz_energy = params.jz * state.vector().dot(zz_state.vector()).re;
         energy += zz_energy;
     }
 
@@ -132,8 +132,8 @@ pub fn calculate_energy(state: &State, params: &HeisenbergParameters) -> f64 {
             let mut z_state = state.clone();
             let mut z_circuit = Circuit::new(num_qubits);
             z_circuit.z(i);
-            z_circuit.execute(&mut z_state);
-            let z_energy = params.external_field * state.vector.dot(&z_state.vector).re;
+            z_circuit.execute(&mut z_state).expect("Circuit execution failed");
+            let z_energy = params.external_field * state.vector().dot(z_state.vector()).re;
             energy += z_energy;
         }
     }
@@ -143,7 +143,7 @@ pub fn calculate_energy(state: &State, params: &HeisenbergParameters) -> f64 {
 
 /// Calculate energy using a more efficient approach with expectation values
 pub fn calculate_energy_efficient(state: &State, params: &HeisenbergParameters) -> f64 {
-    let num_qubits = state.num_qubits;
+    let num_qubits = state.num_qubits();
     let mut energy = 0.0;
 
     // Calculate nearest-neighbor interaction energies
@@ -168,15 +168,15 @@ fn expectation_xx(state: &State, i: usize, j: usize) -> f64 {
     let mut state_copy = state.clone();
 
     // Create a temporary circuit to apply X gates to specific qubits
-    let mut circuit = Circuit::new(state.num_qubits);
+    let mut circuit = Circuit::new(state.num_qubits());
     circuit.x(i);
     circuit.x(j);
 
     // Execute the circuit on our state copy
-    circuit.execute(&mut state_copy);
+    circuit.execute(&mut state_copy).expect("Circuit execution failed");
 
     // Calculate inner product
-    state.vector.dot(&state_copy.vector).re
+    state.vector().dot(state_copy.vector()).re
 }
 
 /// Calculate expectation value of Y_i Y_j
@@ -184,15 +184,15 @@ fn expectation_yy(state: &State, i: usize, j: usize) -> f64 {
     let mut state_copy = state.clone();
 
     // Create a temporary circuit to apply Y gates to specific qubits
-    let mut circuit = Circuit::new(state.num_qubits);
+    let mut circuit = Circuit::new(state.num_qubits());
     circuit.y(i);
     circuit.y(j);
 
     // Execute the circuit on our state copy
-    circuit.execute(&mut state_copy);
+    circuit.execute(&mut state_copy).expect("Circuit execution failed");
 
     // Calculate inner product
-    state.vector.dot(&state_copy.vector).re
+    state.vector().dot(state_copy.vector()).re
 }
 
 /// Calculate expectation value of Z_i Z_j
@@ -200,15 +200,15 @@ fn expectation_zz(state: &State, i: usize, j: usize) -> f64 {
     let mut state_copy = state.clone();
 
     // Create a temporary circuit to apply Z gates to specific qubits
-    let mut circuit = Circuit::new(state.num_qubits);
+    let mut circuit = Circuit::new(state.num_qubits());
     circuit.z(i);
     circuit.z(j);
 
     // Execute the circuit on our state copy
-    circuit.execute(&mut state_copy);
+    circuit.execute(&mut state_copy).expect("Circuit execution failed");
 
     // Calculate inner product
-    state.vector.dot(&state_copy.vector).re
+    state.vector().dot(state_copy.vector()).re
 }
 
 /// Calculate expectation value of Z_i
@@ -216,12 +216,12 @@ fn expectation_z(state: &State, i: usize) -> f64 {
     let mut state_copy = state.clone();
 
     // Create a temporary circuit to apply Z gate to specific qubit
-    let mut circuit = Circuit::new(state.num_qubits);
+    let mut circuit = Circuit::new(state.num_qubits());
     circuit.z(i);
 
     // Execute the circuit on our state copy
-    circuit.execute(&mut state_copy);
+    circuit.execute(&mut state_copy).expect("Circuit execution failed");
 
     // Calculate inner product
-    state.vector.dot(&state_copy.vector).re
+    state.vector().dot(state_copy.vector()).re
 }

@@ -22,11 +22,11 @@ fn main() {
 
     // Add CNOT between qubits 0 and 1
     let cnot = cnot_gate();
-    circuit.add_matrix_gate(cnot.matrix.clone(), vec![0, 1], "CNOT");
+    circuit.add_matrix_gate(cnot.matrix.clone(), vec![0, 1], "CNOT").unwrap();
 
     // Execute circuit on |00⟩ state
     let mut state = State::zero_state(2);
-    circuit.execute(&mut state);
+    circuit.execute(&mut state).unwrap();
 
     // Bell state should have equal probabilities for |00⟩ and |11⟩
     println!("Bell state probabilities:");

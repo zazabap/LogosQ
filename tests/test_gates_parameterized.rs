@@ -17,9 +17,9 @@ mod tests {
         circuit.rx(0, PI);
 
         let mut state = State::zero_state(1);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
-        let vector = state.vector.as_slice().unwrap();
+        let vector = state.vector().as_slice().unwrap();
         // Check |0⟩ amplitude is ~0
         assert!((vector[0].norm() - 0.0).abs() < 1e-10);
         // Check |1⟩ amplitude is 1 with phase -π/2 (which is -i)
@@ -34,7 +34,7 @@ mod tests {
         circuit.rx(0, PI / 2.0);
 
         let mut state = State::zero_state(1);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         let probs = state.probabilities();
         assert!((probs[0] - 0.5).abs() < 1e-10);
@@ -48,9 +48,9 @@ mod tests {
         circuit.ry(0, PI);
 
         let mut state = State::zero_state(1);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
-        let vector = state.vector.as_slice().unwrap();
+        let vector = state.vector().as_slice().unwrap();
         assert!((vector[0].norm() - 0.0).abs() < 1e-10);
         assert!((vector[1] - Complex64::new(1.0, 0.0)).norm() < 1e-10);
     }
@@ -62,14 +62,14 @@ mod tests {
         circuit.ry(0, PI / 2.0);
 
         let mut state = State::zero_state(1);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         let probs = state.probabilities();
         assert!((probs[0] - 0.5).abs() < 1e-10);
         assert!((probs[1] - 0.5).abs() < 1e-10);
 
         // Check phases are real (no imaginary component)
-        let vector = state.vector.as_slice().unwrap();
+        let vector = state.vector().as_slice().unwrap();
         assert!(vector[0].im.abs() < 1e-10);
         assert!(vector[1].im.abs() < 1e-10);
     }
@@ -82,12 +82,12 @@ mod tests {
         circuit.rz(0, PI);
 
         let mut state = State::zero_state(1);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Apply another H to convert back to computational basis
         let mut circuit2 = Circuit::new(1);
         circuit2.h(0);
-        circuit2.execute(&mut state);
+        circuit2.execute(&mut state).unwrap();
 
         // Should be in |1⟩ state
         let probs = state.probabilities();
@@ -102,13 +102,13 @@ mod tests {
         circuit.h(0); // Create |+⟩
 
         let mut state = State::zero_state(1);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         let probs_before = state.probabilities();
 
         let mut circuit2 = Circuit::new(1);
         circuit2.rz(0, PI / 4.0);
-        circuit2.execute(&mut state);
+        circuit2.execute(&mut state).unwrap();
 
         let probs_after = state.probabilities();
         assert!((probs_before[0] - probs_after[0]).abs() < 1e-10);
@@ -123,9 +123,9 @@ mod tests {
         circuit.phase(0, PI / 2.0); // Apply S gate (phase π/2)
 
         let mut state = State::zero_state(1);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
-        let vector = state.vector.as_slice().unwrap();
+        let vector = state.vector().as_slice().unwrap();
         // |0⟩ amplitude should be unchanged (1/√2)
         assert!((vector[0] - Complex64::new(1.0 / std::f64::consts::SQRT_2, 0.0)).norm() < 1e-10);
         // |1⟩ amplitude should have phase π/2 (i/√2)
@@ -139,7 +139,7 @@ mod tests {
         circuit.u3(0, PI, 0.0, PI);
 
         let mut state = State::zero_state(1);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Should be in |1⟩ state (up to global phase)
         let probs = state.probabilities();
@@ -154,7 +154,7 @@ mod tests {
         circuit.u3(0, PI / 2.0, 0.0, PI);
 
         let mut state = State::zero_state(1);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Should be in |+⟩ state (up to global phase)
         let probs = state.probabilities();
@@ -175,7 +175,7 @@ mod tests {
         circuit.crx(0, 1, PI);
 
         let mut state = State::zero_state(2);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Should still be |00⟩
         assert!((state.probability(0) - 1.0).abs() < 1e-10);
@@ -186,7 +186,7 @@ mod tests {
         circuit2.crx(0, 1, PI);
 
         let mut state2 = State::zero_state(2);
-        circuit2.execute(&mut state2);
+        circuit2.execute(&mut state2).unwrap();
 
         // Should be |11⟩ (with some phase)
         assert!(state2.probability(0) < 1e-10);
@@ -205,7 +205,7 @@ mod tests {
         circuit.cry(0, 1, PI / 2.0);
 
         let mut state = State::zero_state(2);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Target should be in superposition
         assert!((state.probability(2) - 0.5).abs() < 1e-10); // |10⟩
@@ -223,14 +223,14 @@ mod tests {
         circuit.crz(0, 1, PI);
 
         let mut state = State::zero_state(2);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Probabilities should be unchanged
         assert!((state.probability(2) - 0.5).abs() < 1e-10);
         assert!((state.probability(3) - 0.5).abs() < 1e-10);
 
         // But phase should have changed
-        let vector = state.vector.as_slice().unwrap();
+        let vector = state.vector().as_slice().unwrap();
         // Check that the phase relationship changed
         let phase_diff = (vector[3] / vector[2]).arg();
         assert!((phase_diff.abs() - PI).abs() < 1e-10);
@@ -252,7 +252,7 @@ mod tests {
         circuit2.cphase_param(0, 1, PI / 2.0);
 
         let mut state = State::zero_state(2);
-        circuit2.execute(&mut state);
+        circuit2.execute(&mut state).unwrap();
 
         // All probabilities should be equal
         let probs = state.probabilities();
@@ -274,7 +274,7 @@ mod tests {
         circuit.rxx(0, 1, PI / 2.0);
 
         let mut state = State::zero_state(2);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Should create some entanglement
         let probs = state.probabilities();
@@ -293,7 +293,7 @@ mod tests {
         circuit.ryy(0, 1, PI / 4.0);
 
         let mut state = State::zero_state(2);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Should still have equal probabilities (RYY is diagonal in ZZ basis)
         let probs = state.probabilities();
@@ -312,7 +312,7 @@ mod tests {
         circuit.rzz(0, 1, PI / 4.0);
 
         let mut state = State::zero_state(2);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Should still have equal probabilities (RZZ only changes phases)
         let probs = state.probabilities();
@@ -329,10 +329,10 @@ mod tests {
         circuit.rzz(0, 1, PI);
 
         let mut state = State::zero_state(2);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // |00⟩ should get phase e^(-iπ/2) = -i
-        let vector = state.vector.as_slice().unwrap();
+        let vector = state.vector().as_slice().unwrap();
         assert!((vector[0] - Complex64::new(0.0, -1.0)).norm() < 1e-10);
     }
 
@@ -352,7 +352,7 @@ mod tests {
         circuit.ry(1, 0.4);
 
         let mut state = State::zero_state(2);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Check state is normalized
         let probs = state.probabilities();
@@ -368,14 +368,14 @@ mod tests {
         circuit1.ry(0, 0.5);
 
         let mut state1 = State::zero_state(1);
-        circuit1.execute(&mut state1);
+        circuit1.execute(&mut state1).unwrap();
         let probs1 = state1.probabilities();
 
         let mut circuit2 = Circuit::new(1);
         circuit2.ry(0, 1.0);
 
         let mut state2 = State::zero_state(1);
-        circuit2.execute(&mut state2);
+        circuit2.execute(&mut state2).unwrap();
         let probs2 = state2.probabilities();
 
         // Probabilities should be different
@@ -393,18 +393,18 @@ mod tests {
         circuit1.rz(0, 0.7);
 
         let mut state1 = State::zero_state(1);
-        circuit1.execute(&mut state1);
+        circuit1.execute(&mut state1).unwrap();
 
         let mut circuit2 = Circuit::new(1);
         circuit2.h(0);
         circuit2.rz(0, 1.0);
 
         let mut state2 = State::zero_state(1);
-        circuit2.execute(&mut state2);
+        circuit2.execute(&mut state2).unwrap();
 
         // States should be equivalent
-        let vector1 = state1.vector.as_slice().unwrap();
-        let vector2 = state2.vector.as_slice().unwrap();
+        let vector1 = state1.vector().as_slice().unwrap();
+        let vector2 = state2.vector().as_slice().unwrap();
 
         for i in 0..2 {
             assert!((vector1[i] - vector2[i]).norm() < 1e-10);
@@ -419,7 +419,7 @@ mod tests {
         circuit.ry(0, 0.0);
 
         let mut state = State::zero_state(1);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Should still be |0⟩
         assert!((state.probability(0) - 1.0).abs() < 1e-10);
@@ -436,7 +436,7 @@ mod tests {
         circuit.cnot(0, 1);
 
         let mut state = State::zero_state(2);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Should create Bell state |00⟩ + |11⟩ (up to phase)
         assert!((state.probability(0) - 0.5).abs() < 1e-10);
@@ -462,7 +462,7 @@ mod tests {
         circuit.rzz(0, 1, PI / 8.0);
 
         let mut state = State::zero_state(2);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // 4 × π/8 = π/2, should be equivalent to single RZZ(π/2)
         let mut circuit2 = Circuit::new(2);
@@ -471,10 +471,10 @@ mod tests {
         circuit2.rzz(0, 1, PI / 2.0);
 
         let mut state2 = State::zero_state(2);
-        circuit2.execute(&mut state2);
+        circuit2.execute(&mut state2).unwrap();
 
-        let vector1 = state.vector.as_slice().unwrap();
-        let vector2 = state2.vector.as_slice().unwrap();
+        let vector1 = state.vector().as_slice().unwrap();
+        let vector2 = state2.vector().as_slice().unwrap();
 
         for i in 0..4 {
             assert!((vector1[i] - vector2[i]).norm() < 1e-10);
@@ -489,7 +489,7 @@ mod tests {
         circuit1.ry(0, 2.0 * PI);
 
         let mut state1 = State::zero_state(1);
-        circuit1.execute(&mut state1);
+        circuit1.execute(&mut state1).unwrap();
 
         // Should be back to |0⟩ (up to global phase)
         let probs = state1.probabilities();

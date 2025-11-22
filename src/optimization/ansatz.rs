@@ -20,7 +20,7 @@ pub trait Ansatz {
     /// Apply the ansatz to a quantum state
     fn apply(&self, state: &mut State, parameters: &[f64]) {
         assert_eq!(
-            state.num_qubits,
+            state.num_qubits(),
             self.num_qubits(),
             "State qubit count must match ansatz"
         );
@@ -31,7 +31,9 @@ pub trait Ansatz {
         );
 
         let circuit = self.build_circuit(parameters);
-        circuit.execute(state);
+        circuit
+            .execute(state)
+            .expect("Circuit execution failed: state and ansatz qubit count mismatch");
     }
 
     /// Get parameter bounds (optional, for constrained optimization)

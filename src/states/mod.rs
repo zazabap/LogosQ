@@ -1,3 +1,9 @@
+//! Quantum state representation and operations
+//!
+//! This module provides the `State` struct for representing quantum state vectors
+//! and operations for manipulating and measuring quantum states.
+
+use crate::error::{LogosQError, Result};
 use crate::gates::Gate;
 use ndarray::Array1;
 use num_complex::Complex64;
@@ -5,43 +11,126 @@ use rand::distributions::{Distribution, WeightedIndex};
 use rand::thread_rng;
 use std::f64::consts::SQRT_2;
 
-// conditional compilation for parallel features
+#[cfg(feature = "parallel")]
 use rayon::prelude::*;
-/// Represents a quantum state vector using complex amplitudes.
-/// 2^n amplitudes for n qubits.
 
-#[derive(Debug)]
+/// Represents a quantum state vector using complex amplitudes.
+///
+/// For n qubits, the state vector has 2^n complex amplitudes.
+/// The state is automatically normalized when created.
+///
+/// # Example
+///
+/// ```rust
+/// use logosq::prelude::*;
+///
+/// // Create a 2-qubit zero state
+/// let state = State::zero_state(2);
+///
+/// // Get the number of qubits
+/// assert_eq!(state.num_qubits(), 2);
+/// ```
+#[derive(Debug, Clone)]
 pub struct State {
-    pub vector: Array1<Complex64>,
-    pub num_qubits: usize,
+    vector: Array1<Complex64>,
+    num_qubits: usize,
 }
 
 impl State {
     /// Creates a new quantum state from a complex vector (auto-normalized).
-    pub fn new(vector: Array1<Complex64>, num_qubits: Option<usize>) -> Self {
-        // Calculate num_qubits before moving vector
-        let actual_qubits = num_qubits.unwrap_or_else(|| (vector.len() as f64).log2() as usize);
+    ///
+    /// # Arguments
+    /// * `vector` - The state vector (must have length 2^n for n qubits)
+    /// * `num_qubits` - Optional number of qubits (auto-calculated if None)
+    ///
+    /// # Returns
+    /// A normalized quantum state
+    ///
+    /// # Errors
+    /// Returns an error if the vector length is not a power of 2
+    pub fn new(vector: Array1<Complex64>, num_qubits: Option<usize>) -> Result<Self> {
+        let actual_qubits = num_qubits.unwrap_or_else(|| {
+            let len = vector.len();
+            (len as f64).log2() as usize
+        });
+
+        // Validate that vector length is a power of 2
+        let expected_len = 1 << actual_qubits;
+        if vector.len() != expected_len {
+            return Err(LogosQError::InvalidStateDimension {
+                dimension: vector.len(),
+            });
+        }
 
         let mut state = State {
             vector,
             num_qubits: actual_qubits,
         };
         state.normalize();
+        Ok(state)
+    }
+
+    /// Creates a new quantum state from a complex vector without validation.
+    ///
+    /// # Safety
+    /// This function does not validate that the vector length is a power of 2.
+    /// Use with caution.
+    pub fn new_unchecked(vector: Array1<Complex64>, num_qubits: usize) -> Self {
+        let mut state = State { vector, num_qubits };
+        state.normalize();
         state
     }
 
-    // Parallel state normalization
+    /// Normalizes the state vector.
+    ///
+    /// Ensures that the sum of squared amplitudes equals 1.
     pub fn normalize(&mut self) {
-        let norm = self
-            .vector
-            .par_iter()
-            .map(|c| c.norm_sqr())
-            .sum::<f64>()
-            .sqrt();
+        #[cfg(feature = "parallel")]
+        {
+            let norm = self
+                .vector
+                .par_iter()
+                .map(|c| c.norm_sqr())
+                .sum::<f64>()
+                .sqrt();
 
-        if norm > 1e-10 {
-            self.vector.par_mapv_inplace(|c| c / norm);
+            if norm > 1e-10 {
+                self.vector.par_mapv_inplace(|c| c / norm);
+            }
         }
+
+        #[cfg(not(feature = "parallel"))]
+        {
+            let norm = self
+                .vector
+                .iter()
+                .map(|c| c.norm_sqr())
+                .sum::<f64>()
+                .sqrt();
+
+            if norm > 1e-10 {
+                self.vector.mapv_inplace(|c| c / norm);
+            }
+        }
+    }
+
+    /// Returns the number of qubits in this state.
+    pub fn num_qubits(&self) -> usize {
+        self.num_qubits
+    }
+
+    /// Returns a reference to the state vector.
+    pub fn vector(&self) -> &Array1<Complex64> {
+        &self.vector
+    }
+
+    /// Returns a mutable reference to the state vector.
+    ///
+    /// # Warning
+    /// Modifying the vector directly may break normalization.
+    /// Consider using `normalize()` after modifications.
+    pub fn vector_mut(&mut self) -> &mut Array1<Complex64> {
+        &mut self.vector
     }
 
     /// Creates standard basis state |0...0⟩
@@ -69,6 +158,8 @@ impl State {
     }
 
     /// Creates Bell state (maximally entangled two-qubit state)
+    ///
+    /// The Bell state is |Φ⁺⟩ = (|00⟩ + |11⟩) / √2
     pub fn bell_state() -> Self {
         let mut vector = Array1::zeros(4);
         vector[0] = Complex64::new(1.0 / SQRT_2, 0.0);
@@ -85,6 +176,8 @@ impl State {
     }
 
     /// Measures the entire state, returning the observed basis state index.
+    ///
+    /// This is a probabilistic measurement that collapses the state.
     pub fn measure(&self) -> usize {
         let probs: Vec<f64> = self.vector.iter().map(|x| x.norm_sqr()).collect();
         let dist = WeightedIndex::new(&probs).unwrap();
@@ -93,9 +186,22 @@ impl State {
     }
 
     /// Measures a specific qubit, collapsing the state.
-    /// Returns the measurement result (0 or 1).
-    pub fn measure_qubit(&mut self, qubit_idx: usize) -> usize {
-        assert!(qubit_idx < self.num_qubits, "Qubit index out of range");
+    ///
+    /// # Arguments
+    /// * `qubit_idx` - Index of the qubit to measure (0-indexed)
+    ///
+    /// # Returns
+    /// The measurement result (0 or 1)
+    ///
+    /// # Errors
+    /// Returns an error if the qubit index is out of range
+    pub fn measure_qubit(&mut self, qubit_idx: usize) -> Result<usize> {
+        if qubit_idx >= self.num_qubits {
+            return Err(LogosQError::InvalidQubitIndex {
+                index: qubit_idx,
+                num_qubits: self.num_qubits,
+            });
+        }
 
         let mask = 1 << qubit_idx;
         let mut prob_one = 0.0;
@@ -126,10 +232,16 @@ impl State {
 
         self.vector = new_vector;
         self.normalize();
-        result
+        Ok(result)
     }
 
-    // Parallel measurement for multiple shots
+    /// Parallel measurement for multiple shots.
+    ///
+    /// Returns a HashMap mapping basis state indices to measurement counts.
+    ///
+    /// # Arguments
+    /// * `n_shots` - Number of measurement shots
+    #[cfg(feature = "parallel")]
     pub fn measure_shots_parallel(
         &self,
         n_shots: usize,
@@ -146,11 +258,34 @@ impl State {
         counts
     }
 
+    /// Sequential measurement for multiple shots (fallback when parallel is disabled).
+    ///
+    /// Returns a HashMap mapping basis state indices to measurement counts.
+    ///
+    /// # Arguments
+    /// * `n_shots` - Number of measurement shots
+    #[cfg(not(feature = "parallel"))]
+    pub fn measure_shots(&self, n_shots: usize) -> std::collections::HashMap<usize, usize> {
+        let mut counts = std::collections::HashMap::new();
+        for _ in 0..n_shots {
+            let result = self.measure();
+            *counts.entry(result).or_insert(0) += 1;
+        }
+        counts
+    }
+
+    /// Returns the probability distribution over all basis states.
     pub fn probabilities(&self) -> Vec<f64> {
         self.vector.mapv(|c| c.norm_sqr()).to_vec()
     }
 
     /// Calculates probability of measuring a particular basis state.
+    ///
+    /// # Arguments
+    /// * `basis_state` - The basis state index
+    ///
+    /// # Returns
+    /// The probability (0.0 if basis_state is out of range)
     pub fn probability(&self, basis_state: usize) -> f64 {
         if basis_state >= self.vector.len() {
             return 0.0;
@@ -159,6 +294,8 @@ impl State {
     }
 
     /// Tensor product with another state.
+    ///
+    /// Creates a new state representing |self⟩ ⊗ |other⟩
     pub fn tensor_product(&self, other: &State) -> State {
         let n1 = self.vector.len();
         let n2 = other.vector.len();
@@ -176,7 +313,9 @@ impl State {
         }
     }
 
-    /// A simple print function to display the quantum state
+    /// Returns a string representation of the quantum state.
+    ///
+    /// Shows all basis states with non-negligible probability.
     pub fn print(&self) -> String {
         let mut output = format!(
             "State: {} qubit{}\n",
@@ -199,24 +338,56 @@ impl State {
         output
     }
 
-    // Parallel state inner product
-    pub fn inner_product_parallel(&self, other: &State) -> Complex64 {
+    /// Computes the inner product with another state.
+    ///
+    /// Returns ⟨self|other⟩ = Σᵢ self.vector[i]* · other.vector[i]
+    ///
+    /// # Arguments
+    /// * `other` - The other state (must have same dimension)
+    ///
+    /// # Errors
+    /// Returns an error if the states have different dimensions
+    #[cfg(feature = "parallel")]
+    pub fn inner_product_parallel(&self, other: &State) -> Result<Complex64> {
         use ndarray::Zip;
-        assert_eq!(self.vector.len(), other.vector.len());
 
-        Zip::from(&self.vector)
+        if self.vector.len() != other.vector.len() {
+            return Err(LogosQError::DimensionMismatch {
+                expected: self.vector.len(),
+                actual: other.vector.len(),
+            });
+        }
+
+        Ok(Zip::from(&self.vector)
             .and(&other.vector)
             .par_map_collect(|a, b| a.conj() * b)
             .into_iter()
-            .sum()
+            .sum())
     }
-}
 
-impl Clone for State {
-    fn clone(&self) -> Self {
-        State {
-            vector: self.vector.clone(),
-            num_qubits: self.num_qubits,
+    /// Computes the inner product with another state (sequential version).
+    ///
+    /// Returns ⟨self|other⟩ = Σᵢ self.vector[i]* · other.vector[i]
+    ///
+    /// # Arguments
+    /// * `other` - The other state (must have same dimension)
+    ///
+    /// # Errors
+    /// Returns an error if the states have different dimensions
+    #[cfg(not(feature = "parallel"))]
+    pub fn inner_product(&self, other: &State) -> Result<Complex64> {
+        if self.vector.len() != other.vector.len() {
+            return Err(LogosQError::DimensionMismatch {
+                expected: self.vector.len(),
+                actual: other.vector.len(),
+            });
         }
+
+        Ok(self
+            .vector
+            .iter()
+            .zip(other.vector.iter())
+            .map(|(a, b)| a.conj() * b)
+            .sum())
     }
 }

@@ -11,7 +11,7 @@ pub struct CNOTGate {
 
 impl Gate for CNOTGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         let control_bit = n - 1 - self.control;
         let target_bit = n - 1 - self.target;
 
@@ -19,7 +19,7 @@ impl Gate for CNOTGate {
         let target_mask = 1 << target_bit;
 
         let full_dim = 1 << n;
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             if (i & control_mask) != 0 && (i & target_mask) == 0 {
@@ -39,7 +39,7 @@ pub struct SWAPGate {
 
 impl Gate for SWAPGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         let bit1 = n - 1 - self.qubit1;
         let bit2 = n - 1 - self.qubit2;
 
@@ -47,7 +47,7 @@ impl Gate for SWAPGate {
         let mask2 = 1 << bit2;
 
         let full_dim = 1 << n;
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             let b1 = (i & mask1) != 0;
@@ -70,7 +70,7 @@ pub struct CZGate {
 
 impl Gate for CZGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         let control_bit = n - 1 - self.control;
         let target_bit = n - 1 - self.target;
 
@@ -79,7 +79,7 @@ impl Gate for CZGate {
         let both_mask = control_mask | target_mask;
 
         let full_dim = 1 << n;
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             if (i & both_mask) == both_mask {
@@ -99,7 +99,7 @@ pub struct CPhaseGate {
 
 impl Gate for CPhaseGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         let control_bit = n - 1 - self.control;
         let target_bit = n - 1 - self.target;
 
@@ -108,7 +108,7 @@ impl Gate for CPhaseGate {
         let both_mask = control_mask | target_mask;
 
         let full_dim = 1 << n;
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
         let phase = Complex64::from_polar(1.0, self.angle);
 
         #[cfg(feature = "parallel")]

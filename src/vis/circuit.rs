@@ -6,8 +6,8 @@ use std::io::Result;
 
 /// Generates a text-based visualization of the circuit
 pub fn text_diagram(circuit: &Circuit) -> String {
-    let num_qubits = circuit.num_qubits;
-    let num_ops = circuit.operations.len();
+    let num_qubits = circuit.num_qubits();
+    let num_ops = circuit.num_operations();
 
     // Create empty grid
     let mut grid: Vec<Vec<char>> = vec![vec![' '; num_ops * 4 + 2]; num_qubits * 2 + 1];
@@ -30,17 +30,17 @@ pub fn text_diagram(circuit: &Circuit) -> String {
     }
 
     // Draw gates
-    for (op_idx, op) in circuit.operations.iter().enumerate() {
+    for (op_idx, op) in circuit.operations().iter().enumerate() {
         let col = op_idx * 4 + 4; // Position of the gate
 
-        match op.qubits.len() {
+        match op.qubits().len() {
             // Single-qubit gate
             1 => {
-                let qubit = op.qubits[0];
+                let qubit = op.qubits()[0];
                 let row = qubit * 2 + 1;
 
                 // Gate symbol (use first character of name)
-                let symbol = op.name.chars().next().unwrap_or('?');
+                let symbol = op.name().chars().next().unwrap_or('?');
                 grid[row][col] = symbol;
 
                 // Box around symbol
@@ -56,13 +56,13 @@ pub fn text_diagram(circuit: &Circuit) -> String {
 
             // Two-qubit gate
             2 => {
-                let control = op.qubits[0];
-                let target = op.qubits[1];
+                let control = op.qubits()[0];
+                let target = op.qubits()[1];
                 let control_row = control * 2 + 1;
                 let target_row = target * 2 + 1;
 
                 // Handle CNOT specially
-                if op.name.contains("CNOT") || op.name.contains("CX") {
+                if op.name().contains("CNOT") || op.name().contains("CX") {
                     // Draw control point
                     grid[control_row][col] = '●';
 
@@ -81,7 +81,7 @@ pub fn text_diagram(circuit: &Circuit) -> String {
                     grid[target_row][col] = '⊕';
                 } else {
                     // For other two-qubit gates
-                    let first_letter = op.name.chars().next().unwrap_or('?');
+                    let first_letter = op.name().chars().next().unwrap_or('?');
 
                     // Draw control points
                     grid[control_row][col] = '●';
@@ -113,11 +113,11 @@ pub fn text_diagram(circuit: &Circuit) -> String {
             // Multi-qubit gates (like Toffoli)
             _ => {
                 // Sort qubits by index
-                let mut qubits = op.qubits.clone();
+                let mut qubits = op.qubits().to_vec();
                 qubits.sort();
 
                 // The last qubit is usually the target
-                let target = *op.qubits.last().unwrap();
+                let target = *op.qubits().last().unwrap();
                 let target_row = target * 2 + 1;
 
                 // Draw target
@@ -145,7 +145,7 @@ pub fn text_diagram(circuit: &Circuit) -> String {
 
     // Convert grid to string
     let mut result = String::new();
-    if let Some(name) = &circuit.name {
+    if let Some(name) = circuit.name() {
         result.push_str(&format!("Circuit: {}\n", name));
     }
 
@@ -159,8 +159,8 @@ pub fn text_diagram(circuit: &Circuit) -> String {
 
 /// Generates an SVG visualization of the circuit
 pub fn svg_diagram(circuit: &Circuit) -> String {
-    let num_qubits = circuit.num_qubits;
-    let num_ops = circuit.operations.len();
+    let num_qubits = circuit.num_qubits();
+    let num_ops = circuit.num_operations();
 
     // SVG constants
     let cell_width = 60;
@@ -185,7 +185,7 @@ pub fn svg_diagram(circuit: &Circuit) -> String {
     );
 
     // Add circuit name if available
-    if let Some(name) = &circuit.name {
+    if let Some(name) = circuit.name() {
         svg.push_str(&format!(
             r#"<text x="{}" y="20" font-family="sans-serif" font-size="16px" text-anchor="middle">{}</text>"#,
             width / 2, name
@@ -225,17 +225,17 @@ pub fn svg_diagram(circuit: &Circuit) -> String {
     gate_colors.insert("T", "#FFE6F0"); // Light pink for T
 
     // Draw gates
-    for (op_idx, op) in circuit.operations.iter().enumerate() {
+    for (op_idx, op) in circuit.operations().iter().enumerate() {
         let x = op_idx * cell_width + margin + cell_width / 2;
 
-        match op.qubits.len() {
+        match op.qubits().len() {
             // Single-qubit gate
             1 => {
-                let qubit = op.qubits[0];
+                let qubit = op.qubits()[0];
                 let y = qubit * cell_height + margin;
 
                 // Determine gate color
-                let gate_prefix = op.name.split('(').next().unwrap_or("").trim();
+                let gate_prefix = op.name().split('(').next().unwrap_or("").trim();
                 let fill_color = gate_colors
                     .get(gate_prefix)
                     .unwrap_or(&"#FFFFFF")
@@ -254,14 +254,14 @@ pub fn svg_diagram(circuit: &Circuit) -> String {
                 // Gate label
                 svg.push_str(&format!(
                     r#"<text x="{}" y="{}" class="gate-text">{}</text>"#,
-                    x, y, op.name
+                    x, y, op.name()
                 ));
             }
 
             // Two-qubit gate
             2 => {
-                let control = op.qubits[0];
-                let target = op.qubits[1];
+                let control = op.qubits()[0];
+                let target = op.qubits()[1];
                 let control_y = control * cell_height + margin;
                 let target_y = target * cell_height + margin;
 
@@ -271,7 +271,7 @@ pub fn svg_diagram(circuit: &Circuit) -> String {
                     x, control_y, x, target_y
                 ));
 
-                if op.name.contains("CNOT") || op.name.contains("CX") {
+                if op.name().contains("CNOT") || op.name().contains("CX") {
                     // Control point
                     svg.push_str(&format!(
                         r#"<circle cx="{}" cy="{}" r="5" class="control-point" />"#,
@@ -297,7 +297,7 @@ pub fn svg_diagram(circuit: &Circuit) -> String {
                         x,
                         target_y + 10
                     ));
-                } else if op.name.contains("CZ") {
+                } else if op.name().contains("CZ") {
                     // Control points
                     svg.push_str(&format!(
                         r#"<circle cx="{}" cy="{}" r="5" class="control-point" />"#,
@@ -330,7 +330,7 @@ pub fn svg_diagram(circuit: &Circuit) -> String {
                     ));
                     svg.push_str(&format!(
                         r#"<text x="{}" y="{}" class="gate-text">{}</text>"#,
-                        x, target_y, op.name
+                        x, target_y, op.name()
                     ));
                 }
             }
@@ -338,7 +338,7 @@ pub fn svg_diagram(circuit: &Circuit) -> String {
             // Multi-qubit gates
             _ => {
                 // Sort qubits by index
-                let mut sorted_qubits = op.qubits.clone();
+                let mut sorted_qubits = op.qubits().to_vec();
                 sorted_qubits.sort();
 
                 let min_y = sorted_qubits[0] * cell_height + margin;
@@ -374,7 +374,7 @@ pub fn svg_diagram(circuit: &Circuit) -> String {
                     r#"<text x="{}" y="{}" class="gate-text">{}</text>"#,
                     x,
                     target_y,
-                    op.name.chars().next().unwrap_or('?')
+                    op.name().chars().next().unwrap_or('?')
                 ));
             }
         }

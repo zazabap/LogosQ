@@ -64,7 +64,7 @@ impl NoiseModel for DepolarizingNoise {
         // Apply noise to specified qubits or all qubits
         let target_qubits = match &self.params.target_qubits {
             Some(qubits) => qubits.clone(),
-            None => (0..state.num_qubits).collect(),
+            None => (0..state.num_qubits()).collect(),
         };
 
         for &qubit in &target_qubits {
@@ -107,16 +107,17 @@ impl AmplitudeDampingNoise {
 
 impl NoiseModel for AmplitudeDampingNoise {
     fn apply(&self, state: &mut State) {
-        let dimension = state.vector.len();
+        let dimension = state.vector().len();
 
         // Apply noise to specified qubits or all qubits
         let target_qubits = match &self.params.target_qubits {
             Some(qubits) => qubits.clone(),
-            None => (0..state.num_qubits).collect(),
+            None => (0..state.num_qubits()).collect(),
         };
 
         // Create a new vector to store the updated state
         let mut new_vector = Array1::<Complex64>::zeros(dimension);
+        let state_vec = state.vector();
 
         for &qubit in &target_qubits {
             let gamma = self.params.error_probability;
@@ -129,19 +130,19 @@ impl NoiseModel for AmplitudeDampingNoise {
             for i in 0..dimension {
                 if (i & (1 << qubit)) == 0 {
                     // If qubit is |0⟩, apply K0 part |0⟩⟨0|
-                    new_vector[i] += state.vector[i];
+                    new_vector[i] += state_vec[i];
                 } else {
                     // If qubit is |1⟩, apply K0 part sqrt(1-γ)|1⟩⟨1|
-                    new_vector[i] += state.vector[i] * Complex64::new((1.0 - gamma).sqrt(), 0.0);
+                    new_vector[i] += state_vec[i] * Complex64::new((1.0 - gamma).sqrt(), 0.0);
 
                     // Apply K1 = sqrt(γ)|0⟩⟨1|
                     let j = i & !(1 << qubit); // Flip qubit from |1⟩ to |0⟩
-                    new_vector[j] += state.vector[i] * Complex64::new(sqrt_gamma, 0.0);
+                    new_vector[j] += state_vec[i] * Complex64::new(sqrt_gamma, 0.0);
                 }
             }
         }
 
-        state.vector = new_vector;
+        *state.vector_mut() = new_vector;
         state.normalize();
     }
 
@@ -171,16 +172,17 @@ impl PhaseDampingNoise {
 
 impl NoiseModel for PhaseDampingNoise {
     fn apply(&self, state: &mut State) {
-        let dimension = state.vector.len();
+        let dimension = state.vector().len();
 
         // Apply noise to specified qubits or all qubits
         let target_qubits = match &self.params.target_qubits {
             Some(qubits) => qubits.clone(),
-            None => (0..state.num_qubits).collect(),
+            None => (0..state.num_qubits()).collect(),
         };
 
         // Create a new vector to store the updated state
         let mut new_vector = ndarray::Array1::zeros(dimension);
+        let state_vec = state.vector();
 
         for &qubit in &target_qubits {
             // Phase damping Kraus operators:
@@ -192,7 +194,7 @@ impl NoiseModel for PhaseDampingNoise {
 
             for i in 0..dimension {
                 // Copy original state
-                new_vector[i] = state.vector[i];
+                new_vector[i] = state_vec[i];
 
                 // If qubit is in state |1⟩, apply the phase damping
                 if (i & (1 << qubit)) != 0 {
@@ -203,7 +205,7 @@ impl NoiseModel for PhaseDampingNoise {
         }
 
         // Update the state vector and normalize
-        state.vector = new_vector;
+        *state.vector_mut() = new_vector;
         state.normalize();
     }
 
@@ -272,7 +274,7 @@ impl NoiseModel for ThermalRelaxationNoise {
         let target_qubits = self
             .target_qubits
             .clone()
-            .unwrap_or_else(|| (0..state.num_qubits).collect());
+            .unwrap_or_else(|| (0..state.num_qubits()).collect());
 
         // Apply amplitude damping first
         if p_amplitude > 0.0 {
@@ -333,20 +335,22 @@ impl NoiseModel for CompositeNoise {
 
 // Helper functions to apply specific Pauli errors
 fn apply_x_error(state: &mut State, qubit: usize) {
-    let dimension = state.vector.len();
-    let mut new_vector = state.vector.clone();
+    let dimension = state.vector().len();
+    let state_vec = state.vector();
+    let mut new_vector = state_vec.clone();
 
     for i in 0..dimension {
         let j = i ^ (1 << qubit); // Flip the qubit bit
-        new_vector[i] = state.vector[j];
+        new_vector[i] = state_vec[j];
     }
 
-    state.vector = new_vector;
+    *state.vector_mut() = new_vector;
 }
 
 fn apply_y_error(state: &mut State, qubit: usize) {
-    let dimension = state.vector.len();
-    let mut new_vector = state.vector.clone();
+    let dimension = state.vector().len();
+    let state_vec = state.vector();
+    let mut new_vector = state_vec.clone();
     let imag_i = Complex64::new(0.0, 1.0);
 
     for i in 0..dimension {
@@ -354,22 +358,23 @@ fn apply_y_error(state: &mut State, qubit: usize) {
 
         // Check if the qubit is 1 in state i
         if (i & (1 << qubit)) != 0 {
-            new_vector[i] = -imag_i * state.vector[j];
+            new_vector[i] = -imag_i * state_vec[j];
         } else {
-            new_vector[i] = imag_i * state.vector[j];
+            new_vector[i] = imag_i * state_vec[j];
         }
     }
 
-    state.vector = new_vector;
+    *state.vector_mut() = new_vector;
 }
 
 fn apply_z_error(state: &mut State, qubit: usize) {
-    let dimension = state.vector.len();
+    let dimension = state.vector().len();
+    let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
     for i in 0..dimension {
         // Apply phase flip if qubit is in state |1⟩
         if (i & (1 << qubit)) != 0 {
-            state.vector[i] = -state.vector[i];
+            vector_slice[i] = -vector_slice[i];
         }
     }
 }

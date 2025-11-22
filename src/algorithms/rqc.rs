@@ -184,7 +184,9 @@ fn add_random_rotation_gate<R: Rng>(circuit: &mut Circuit, num_qubits: usize, rn
 /// Applies a random circuit to a quantum state
 pub fn apply(state: &mut State, config: &RandomCircuitConfig) {
     let circuit = generate(config);
-    circuit.execute(state);
+    circuit
+        .execute(state)
+        .expect("Circuit execution failed: qubit count mismatch");
 }
 
 /// Generates a random circuit with specified number of qubits and depth

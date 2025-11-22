@@ -12,29 +12,82 @@ use num_complex::Complex64;
 /// Trait for quantum gates.
 ///
 /// All gate implementations must implement this trait to be applied to quantum states.
+/// Gates must be thread-safe (Send + Sync) to support parallel execution.
+///
+/// # Example
+///
+/// ```rust
+/// use logosq::prelude::*;
+///
+/// let mut state = State::zero_state(1);
+/// let gate = x(0, 1);
+/// gate.apply(&mut state);
+/// ```
 pub trait Gate: Send + Sync {
-    /// Apply the gate to a quantum state
+    /// Apply the gate to a quantum state.
+    ///
+    /// This method modifies the state vector in place.
+    /// The state will be automatically normalized after gate application.
+    ///
+    /// # Arguments
+    /// * `state` - The quantum state to apply the gate to
     fn apply(&self, state: &mut State);
 }
 
-/// Generic matrix-based gate implementation
+/// Generic matrix-based gate implementation.
 ///
 /// This is useful for small systems or as a reference implementation.
-/// For larger systems, use the optimized gate implementations.
-#[derive(Clone)]
+/// For larger systems, use the optimized gate implementations which directly
+/// manipulate the state vector for better performance.
+///
+/// # Example
+///
+/// ```rust
+/// use logosq::prelude::*;
+/// use ndarray::Array2;
+///
+/// let matrix = Array2::from_shape_vec((2, 2), vec![
+///     Complex64::new(0.0, 0.0), Complex64::new(1.0, 0.0),
+///     Complex64::new(1.0, 0.0), Complex64::new(0.0, 0.0),
+/// ]).unwrap();
+/// let gate = MatrixGate { matrix };
+/// ```
+#[derive(Clone, Debug)]
 pub struct MatrixGate {
+    /// The gate matrix (must be unitary)
     pub matrix: Array2<Complex64>,
+}
+
+impl MatrixGate {
+    /// Creates a new matrix gate.
+    ///
+    /// # Arguments
+    /// * `matrix` - The gate matrix (should be unitary)
+    pub fn new(matrix: Array2<Complex64>) -> Self {
+        Self { matrix }
+    }
+
+    /// Returns a reference to the gate matrix.
+    pub fn matrix(&self) -> &Array2<Complex64> {
+        &self.matrix
+    }
 }
 
 impl Gate for MatrixGate {
     fn apply(&self, state: &mut State) {
-        assert_eq!(
-            self.matrix.shape()[1],
-            state.vector.len(),
-            "Matrix columns must match state dimension"
-        );
+        let state_vec = state.vector();
+        let state_dim = state_vec.len();
 
-        state.vector = self.matrix.dot(&state.vector);
+        if self.matrix.shape()[1] != state_dim {
+            panic!(
+                "Matrix columns ({}) must match state dimension ({})",
+                self.matrix.shape()[1],
+                state_dim
+            );
+        }
+
+        let new_vector = self.matrix.dot(state_vec);
+        *state.vector_mut() = new_vector;
         state.normalize();
     }
 }

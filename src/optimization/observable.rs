@@ -93,7 +93,7 @@ impl PauliTerm {
 
     /// Compute expectation value for this term
     pub fn expectation(&self, state: &State) -> f64 {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         assert_eq!(
             self.paulis.len(),
             n,
@@ -101,7 +101,7 @@ impl PauliTerm {
         );
 
         // For efficiency, we compute expectation directly
-        let vector = state.vector.as_slice().unwrap();
+        let vector = state.vector().as_slice().unwrap();
         let dim = 1 << n;
 
         let mut result = Complex64::new(0.0, 0.0);

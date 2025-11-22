@@ -20,20 +20,20 @@ mod tests {
             Complex64::new(0.5, -0.5),
         ]);
 
-        let state = State::new(vector.clone(), Some(2));
+        let state = State::new(vector.clone(), Some(2)).unwrap();
 
         // Calculate expected normalized values manually
         let norm = vector.iter().map(|x| x.norm_sqr()).sum::<f64>().sqrt();
         let expected = vector.mapv(|x| x / norm);
 
         // Check that normalization worked
-        let state_norm = state.vector.iter().map(|c| c.norm_sqr()).sum::<f64>();
+        let state_norm = state.vector().iter().map(|c| c.norm_sqr()).sum::<f64>();
         assert!((state_norm - 1.0).abs() < 1e-10, "Normalization failed");
 
         // Compare each element with expected value
-        for i in 0..state.vector.len() {
+        for i in 0..state.vector().len() {
             assert!(
-                (state.vector[i] - expected[i]).norm() < 1e-10,
+                (state.vector()[i] - expected[i]).norm() < 1e-10,
                 "Normalized value differs from expected at index {}",
                 i
             );
@@ -43,9 +43,9 @@ mod tests {
 
         // 1. Already normalized state
         let mut state_norm = State::zero_state(2);
-        let norm_before = state_norm.vector.iter().map(|c| c.norm_sqr()).sum::<f64>();
+        let norm_before = state_norm.vector().iter().map(|c| c.norm_sqr()).sum::<f64>();
         state_norm.normalize(); // Normalize again
-        let norm_after = state_norm.vector.iter().map(|c| c.norm_sqr()).sum::<f64>();
+        let norm_after = state_norm.vector().iter().map(|c| c.norm_sqr()).sum::<f64>();
 
         assert!(
             (norm_before - norm_after).abs() < 1e-10,
@@ -54,12 +54,12 @@ mod tests {
 
         // 2. Zero state
         let zero_vector = Array1::zeros(4);
-        let zero_state = State::new(zero_vector, Some(2));
+        let zero_state = State::new(zero_vector, Some(2)).unwrap();
 
         // State should remain zeros
-        for i in 0..zero_state.vector.len() {
+        for i in 0..zero_state.vector().len() {
             assert!(
-                zero_state.vector[i].norm() < 1e-10,
+                zero_state.vector()[i].norm() < 1e-10,
                 "Zero state normalization failed"
             );
         }
@@ -76,7 +76,7 @@ mod tests {
         println!(
             "Created state with {} qubits ({} amplitudes)",
             LARGE_STATE_QUBITS,
-            large_state.vector.len()
+            large_state.vector().len()
         );
 
         // Measure performance
@@ -89,7 +89,7 @@ mod tests {
 
         // We don't assert anything about performance, just report it
         assert!(
-            state.vector.iter().map(|c| c.norm_sqr()).sum::<f64>() - 1.0 < 1e-10,
+            state.vector().iter().map(|c| c.norm_sqr()).sum::<f64>() - 1.0 < 1e-10,
             "Normalized state should have norm 1.0"
         );
     }
@@ -125,19 +125,19 @@ mod tests {
         }
 
         // Create a state with this vector
-        let state = State::new(vector.clone(), Some(4));
+        let state = State::new(vector.clone(), Some(4)).unwrap();
 
         // Create a manually normalized version for comparison
         let norm = vector.iter().map(|x| x.norm_sqr()).sum::<f64>().sqrt();
         let manual_normalized = vector.mapv(|x| x / norm);
 
         // Compare results
-        for i in 0..state.vector.len() {
+        for i in 0..state.vector().len() {
             assert!(
-                (state.vector[i] - manual_normalized[i]).norm() < 1e-10,
+                (state.vector()[i] - manual_normalized[i]).norm() < 1e-10,
                 "State normalization differs from manual at index {}: {:?} vs {:?}",
                 i,
-                state.vector[i],
+                state.vector()[i],
                 manual_normalized[i]
             );
         }

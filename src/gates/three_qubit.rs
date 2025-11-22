@@ -12,7 +12,7 @@ pub struct ToffoliGate {
 
 impl Gate for ToffoliGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         let c1_bit = n - 1 - self.control1;
         let c2_bit = n - 1 - self.control2;
         let target_bit = n - 1 - self.target;
@@ -23,7 +23,7 @@ impl Gate for ToffoliGate {
         let controls_mask = c1_mask | c2_mask;
 
         let full_dim = 1 << n;
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             if (i & controls_mask) == controls_mask && (i & target_mask) == 0 {

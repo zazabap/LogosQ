@@ -34,7 +34,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![qubit], "RX");
+        self.add_operation_unchecked(gate, vec![qubit], "RX");
         self
     }
 
@@ -61,7 +61,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![qubit], "RY");
+        self.add_operation_unchecked(gate, vec![qubit], "RY");
         self
     }
 
@@ -88,7 +88,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![qubit], "RZ");
+        self.add_operation_unchecked(gate, vec![qubit], "RZ");
         self
     }
 
@@ -115,7 +115,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![qubit], "P");
+        self.add_operation_unchecked(gate, vec![qubit], "P");
         self
     }
 
@@ -146,7 +146,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![qubit], "U3");
+        self.add_operation_unchecked(gate, vec![qubit], "U3");
         self
     }
 
@@ -183,7 +183,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![control, target], "CRX");
+        self.add_operation_unchecked(gate, vec![control, target], "CRX");
         self
     }
 
@@ -216,7 +216,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![control, target], "CRY");
+        self.add_operation_unchecked(gate, vec![control, target], "CRY");
         self
     }
 
@@ -249,7 +249,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![control, target], "CRZ");
+        self.add_operation_unchecked(gate, vec![control, target], "CRZ");
         self
     }
 
@@ -282,7 +282,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![control, target], "CP");
+        self.add_operation_unchecked(gate, vec![control, target], "CP");
         self
     }
 
@@ -319,7 +319,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![qubit1, qubit2], "RXX");
+        self.add_operation_unchecked(gate, vec![qubit1, qubit2], "RXX");
         self
     }
 
@@ -352,7 +352,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![qubit1, qubit2], "RYY");
+        self.add_operation_unchecked(gate, vec![qubit1, qubit2], "RYY");
         self
     }
 
@@ -387,7 +387,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![qubit1, qubit2], "RZZ");
+        self.add_operation_unchecked(gate, vec![qubit1, qubit2], "RZZ");
         self
     }
 }

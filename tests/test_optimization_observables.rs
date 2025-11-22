@@ -50,7 +50,7 @@ mod tests {
         circuit.x(0); // Flip to |1⟩
 
         let mut state = State::zero_state(1);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         let expectation = term.expectation(&state);
         assert!((expectation - (-1.0)).abs() < 1e-10);
@@ -66,7 +66,7 @@ mod tests {
         circuit.h(0); // Create |+⟩
 
         let mut state = State::zero_state(1);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         let expectation = term.expectation(&state);
         assert!((expectation - 1.0).abs() < 1e-10);
@@ -96,7 +96,7 @@ mod tests {
         circuit.x(0);
         circuit.x(1);
         let mut state = State::zero_state(2);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
         let expectation = obs.expectation(&state);
         assert!((expectation - 1.0).abs() < 1e-10);
 
@@ -104,7 +104,7 @@ mod tests {
         let mut circuit = Circuit::new(2);
         circuit.x(1);
         let mut state = State::zero_state(2);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
         let expectation = obs.expectation(&state);
         assert!((expectation - (-1.0)).abs() < 1e-10);
     }

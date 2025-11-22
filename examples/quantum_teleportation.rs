@@ -29,7 +29,7 @@ fn main() {
 
     // Execute the circuit up to this point
     let mut teleport_state_state = initial_state.clone();
-    circuit.execute(&mut teleport_state_state);
+    circuit.execute(&mut teleport_state_state).unwrap();
     let teleport_state = teleport_state_state;
 
     // Simulate measurements on qubits 0 and 1
@@ -62,7 +62,7 @@ fn main() {
 
     // Execute Bob's full circuit
     let mut bob_state = initial_state.clone();
-    bob_circuit.execute(&mut bob_state);
+    bob_circuit.execute(&mut bob_state).unwrap();
     let final_state = bob_state;
 
     // Calculate the probability of measuring |1⟩ on Bob's qubit
@@ -92,9 +92,9 @@ fn manual_measure_qubit(state: &State, qubit_idx: usize) -> usize {
     let mut prob_one = 0.0;
 
     // Calculate probability by summing up amplitudes where the qubit is 1
-    for i in 0..state.vector.len() {
+    for i in 0..state.vector().len() {
         if (i & (1 << qubit_idx)) != 0 {
-            prob_one += state.vector[i].norm_sqr();
+            prob_one += state.vector()[i].norm_sqr();
         }
     }
 
@@ -110,9 +110,9 @@ fn manual_measure_qubit(state: &State, qubit_idx: usize) -> usize {
 fn calculate_prob_one(state: &State, qubit_idx: usize) -> f64 {
     let mut prob_one = 0.0;
 
-    for i in 0..state.vector.len() {
+    for i in 0..state.vector().len() {
         if (i & (1 << qubit_idx)) != 0 {
-            prob_one += state.vector[i].norm_sqr();
+            prob_one += state.vector()[i].norm_sqr();
         }
     }
 

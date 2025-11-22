@@ -48,12 +48,12 @@ pub fn create_inverse_circuit(num_qubits: usize) -> Circuit {
 /// Applies the QFT to a quantum state (optimized using an FFT on the amplitude vector).
 /// This replaces running the gate sequence and runs in O(N log N) time.
 pub fn apply(state: &mut State) {
-    let n = state.num_qubits;
+    let n = state.num_qubits();
     let len = 1usize << n;
 
     // Ensure state vector has contiguous slice
     let buf = state
-        .vector
+        .vector_mut()
         .as_slice_mut()
         .expect("State vector must be contiguous for FFT optimization");
 
@@ -72,11 +72,11 @@ pub fn apply(state: &mut State) {
 
 /// Applies the inverse QFT to a quantum state (optimized using an FFT).
 pub fn apply_inverse(state: &mut State) {
-    let n = state.num_qubits;
+    let n = state.num_qubits();
     let len = 1usize << n;
 
     let buf = state
-        .vector
+        .vector_mut()
         .as_slice_mut()
         .expect("State vector must be contiguous for FFT optimization");
 
@@ -98,8 +98,9 @@ pub fn controlled_phase(circuit: &mut Circuit, control: usize, target: usize, an
         control,
         target,
         angle,
-        num_qubits: circuit.num_qubits,
+        num_qubits: circuit.num_qubits(),
     };
 
-    circuit.add_operation(gate, vec![control, target], &format!("CP({:.4})", angle));
+    circuit
+        .add_operation_unchecked(gate, vec![control, target], &format!("CP({:.4})", angle));
 }

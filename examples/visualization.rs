@@ -12,11 +12,11 @@ fn main() -> std::io::Result<()> {
 
     // Using the single_qubit::h_gate() function that returns a MatrixGate
     let h = h_gate();
-    bell_circuit.add_operation(h, vec![0], "H");
+    bell_circuit.add_operation(h, vec![0], "H").unwrap();
 
     // Using the multi_qubit::cnot_gate() function
     let cnot = cnot_gate();
-    bell_circuit.add_operation(cnot, vec![0, 1], "CNOT");
+    bell_circuit.add_operation(cnot, vec![0, 1], "CNOT").unwrap();
 
     // Using direct functions
     println!("Text visualization:");
@@ -31,11 +31,11 @@ fn main() -> std::io::Result<()> {
     let mut ghz_circuit = Circuit::new(3).with_name("GHZ State Preparation");
 
     // Add H gate to first qubit
-    ghz_circuit.add_operation(h_gate(), vec![0], "H");
+    ghz_circuit.add_operation(h_gate(), vec![0], "H").unwrap();
 
     // Add CNOT gates to create GHZ state
-    ghz_circuit.add_operation(cnot_gate(), vec![0, 1], "CNOT");
-    ghz_circuit.add_operation(cnot_gate(), vec![1, 2], "CNOT");
+    ghz_circuit.add_operation(cnot_gate(), vec![0, 1], "CNOT").unwrap();
+    ghz_circuit.add_operation(cnot_gate(), vec![1, 2], "CNOT").unwrap();
 
     // Using trait methods
     println!("Text visualization:");
@@ -51,19 +51,19 @@ fn main() -> std::io::Result<()> {
 
     // QFT implementation
     // Qubit 0
-    qft_circuit.add_operation(h_gate(), vec![0], "H");
-    qft_circuit.add_operation(rz_gate(std::f64::consts::PI / 2.0), vec![1, 0], "Rz(π/2)");
-    qft_circuit.add_operation(rz_gate(std::f64::consts::PI / 4.0), vec![2, 0], "Rz(π/4)");
+    qft_circuit.add_operation(h_gate(), vec![0], "H").unwrap();
+    qft_circuit.add_operation(rz_gate(std::f64::consts::PI / 2.0), vec![1, 0], "Rz(π/2)").unwrap();
+    qft_circuit.add_operation(rz_gate(std::f64::consts::PI / 4.0), vec![2, 0], "Rz(π/4)").unwrap();
 
     // Qubit 1
-    qft_circuit.add_operation(h_gate(), vec![1], "H");
-    qft_circuit.add_operation(rz_gate(std::f64::consts::PI / 2.0), vec![2, 1], "Rz(π/2)");
+    qft_circuit.add_operation(h_gate(), vec![1], "H").unwrap();
+    qft_circuit.add_operation(rz_gate(std::f64::consts::PI / 2.0), vec![2, 1], "Rz(π/2)").unwrap();
 
     // Qubit 2
-    qft_circuit.add_operation(h_gate(), vec![2], "H");
+    qft_circuit.add_operation(h_gate(), vec![2], "H").unwrap();
 
     // Swap qubits 0 and 2
-    qft_circuit.add_operation(swap_gate(), vec![0, 2], "SWAP");
+    qft_circuit.add_operation(swap_gate(), vec![0, 2], "SWAP").unwrap();
 
     println!("Text visualization:");
     println!("{}", qft_circuit.visualize());
@@ -76,25 +76,25 @@ fn main() -> std::io::Result<()> {
 
     // Initial layer of Hadamards
     for i in 0..4 {
-        complex_circuit.add_operation(h_gate(), vec![i], "H");
+        complex_circuit.add_operation(h_gate(), vec![i], "H").unwrap();
     }
 
     // Add some X gates
     let x_gate = x_gate();
-    complex_circuit.add_operation(x_gate.clone(), vec![1], "X");
-    complex_circuit.add_operation(x_gate, vec![3], "X");
+    complex_circuit.add_operation(x_gate.clone(), vec![1], "X").unwrap();
+    complex_circuit.add_operation(x_gate, vec![3], "X").unwrap();
 
     // Add CNOT gates
     let cnot_gate = cnot_gate();
-    complex_circuit.add_operation(cnot_gate.clone(), vec![0, 1], "CNOT");
-    complex_circuit.add_operation(cnot_gate.clone(), vec![2, 3], "CNOT");
+    complex_circuit.add_operation(cnot_gate.clone(), vec![0, 1], "CNOT").unwrap();
+    complex_circuit.add_operation(cnot_gate.clone(), vec![2, 3], "CNOT").unwrap();
 
     // Add Toffoli gate
-    complex_circuit.add_operation(toffoli_gate(), vec![0, 1, 2], "Toffoli");
+    complex_circuit.add_operation(toffoli_gate(), vec![0, 1, 2], "Toffoli").unwrap();
 
     // More gates
-    complex_circuit.add_operation(h_gate(), vec![0], "H");
-    complex_circuit.add_operation(cnot_gate, vec![3, 0], "CNOT");
+    complex_circuit.add_operation(h_gate(), vec![0], "H").unwrap();
+    complex_circuit.add_operation(cnot_gate, vec![3, 0], "CNOT").unwrap();
 
     println!("Text visualization:");
     println!("{}", complex_circuit.visualize());

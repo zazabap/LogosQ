@@ -58,7 +58,8 @@ impl Circuit {
         }
 
         // Add the expanded gate to the circuit
-        self.add_matrix_gate(full_matrix, (0..self.num_qubits).collect(), name);
+        self.add_matrix_gate(full_matrix, (0..self.num_qubits).collect(), name)
+            .expect("Failed to add single-qubit gate");
     }
 
     /// Adds a Pauli-X (NOT) gate to the circuit

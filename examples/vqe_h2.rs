@@ -223,7 +223,7 @@ fn compute_exact_ground_state_energy(hamiltonian: &PauliObservable) -> f64 {
     // Try all computational basis states
     for i in 0..dim {
         let mut state = State::zero_state(n);
-        state.vector[i] = Complex64::new(1.0, 0.0);
+        state.vector_mut()[i] = Complex64::new(1.0, 0.0);
         let energy = hamiltonian.expectation(&state);
         min_energy = min_energy.min(energy);
     }
@@ -234,7 +234,7 @@ fn compute_exact_ground_state_energy(hamiltonian: &PauliObservable) -> f64 {
     let mut best_basis_energy = f64::INFINITY;
     for i in 0..dim {
         let mut state = State::zero_state(n);
-        state.vector[i] = Complex64::new(1.0, 0.0);
+        state.vector_mut()[i] = Complex64::new(1.0, 0.0);
         let energy = hamiltonian.expectation(&state);
         if energy < best_basis_energy {
             best_basis_energy = energy;

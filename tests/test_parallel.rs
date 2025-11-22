@@ -21,19 +21,19 @@ mod tests {
         ]);
 
         // Create two identical states for testing
-        let state = State::new(vector.clone(), Some(2));
+        let state = State::new(vector.clone(), Some(2)).unwrap();
 
         // Get the normalized values for comparison
         let expected = vector.mapv(|x| x / vector.mapv(|x| x.norm_sqr()).sum().sqrt());
 
         // Check that normalization worked
-        let norm = state.vector.iter().map(|c| c.norm_sqr()).sum::<f64>();
+        let norm = state.vector().iter().map(|c| c.norm_sqr()).sum::<f64>();
         assert!((norm - 1.0).abs() < 1e-10, "Normalization failed");
 
         // Check against expected values
-        for i in 0..state.vector.len() {
+        for i in 0..state.vector().len() {
             assert!(
-                (state.vector[i] - expected[i]).norm() < 1e-10,
+                (state.vector()[i] - expected[i]).norm() < 1e-10,
                 "Normalization result differs from expected at index {}",
                 i
             );
@@ -41,9 +41,9 @@ mod tests {
 
         // Test with an already normalized state
         let mut state_norm = State::zero_state(2);
-        let norm_before = state_norm.vector.iter().map(|c| c.norm_sqr()).sum::<f64>();
+        let norm_before = state_norm.vector().iter().map(|c| c.norm_sqr()).sum::<f64>();
         state_norm.normalize(); // Call normalize again
-        let norm_after = state_norm.vector.iter().map(|c| c.norm_sqr()).sum::<f64>();
+        let norm_after = state_norm.vector().iter().map(|c| c.norm_sqr()).sum::<f64>();
 
         assert!(
             (norm_before - norm_after).abs() < 1e-10,
@@ -52,12 +52,12 @@ mod tests {
 
         // Test with zero state
         let zero_vector = Array1::zeros(4);
-        let zero_state = State::new(zero_vector, Some(2));
+        let zero_state = State::new(zero_vector, Some(2)).unwrap();
 
         // State should remain zeros
-        for i in 0..zero_state.vector.len() {
+        for i in 0..zero_state.vector().len() {
             assert!(
-                zero_state.vector[i].norm() < 1e-10,
+                zero_state.vector()[i].norm() < 1e-10,
                 "Zero state normalization failed"
             );
         }
@@ -72,28 +72,28 @@ mod tests {
         let state4 = State::bell_state(); // (|00⟩ + |11⟩)/√2
 
         // Test orthogonal states
-        let prod1 = state1.inner_product_parallel(&state2);
+        let prod1 = state1.inner_product_parallel(&state2).unwrap();
         assert!(
             prod1.norm() < 1e-10,
             "Orthogonal states should have zero inner product"
         );
 
         // Test with self (should be 1)
-        let prod2 = state1.inner_product_parallel(&state1);
+        let prod2 = state1.inner_product_parallel(&state1).unwrap();
         assert!(
             (prod2 - Complex64::new(1.0, 0.0)).norm() < 1e-10,
             "Inner product with self should be 1"
         );
 
         // Test with plus state
-        let prod3 = state1.inner_product_parallel(&state3);
+        let prod3 = state1.inner_product_parallel(&state3).unwrap();
         assert!(
             (prod3 - Complex64::new(0.5, 0.0)).norm() < 1e-10,
             "Inner product of |00⟩ with |++⟩ should be 0.5"
         );
 
         // Test Bell state
-        let prod4 = state1.inner_product_parallel(&state4);
+        let prod4 = state1.inner_product_parallel(&state4).unwrap();
         assert!(
             (prod4 - Complex64::new(1.0 / SQRT_2, 0.0)).norm() < 1e-10,
             "Inner product of |00⟩ with Bell state should be 1/√2"
@@ -115,16 +115,16 @@ mod tests {
             Complex64::new(0.5, 0.0),
         ]);
 
-        let custom1 = State::new(v1, Some(2));
-        let custom2 = State::new(v2, Some(2));
+        let custom1 = State::new(v1, Some(2)).unwrap();
+        let custom2 = State::new(v2, Some(2)).unwrap();
 
         // Calculate inner product manually
         let mut manual_result = Complex64::new(0.0, 0.0);
-        for i in 0..custom1.vector.len() {
-            manual_result += custom1.vector[i].conj() * custom2.vector[i];
+        for i in 0..custom1.vector().len() {
+            manual_result += custom1.vector()[i].conj() * custom2.vector()[i];
         }
 
-        let parallel_result = custom1.inner_product_parallel(&custom2);
+        let parallel_result = custom1.inner_product_parallel(&custom2).unwrap();
 
         assert!(
             (manual_result - parallel_result).norm() < 1e-10,
