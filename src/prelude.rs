@@ -13,6 +13,7 @@ pub use crate::states;
 
 // Re-export core types for direct access
 pub use crate::circuits::Circuit;
+pub use crate::error::{LogosQError, Result};
 pub use crate::gates::{Gate, MatrixGate};
 pub use crate::states::State;
 
@@ -78,25 +79,16 @@ pub use crate::gates::three_qubit::{
 // PARAMETERIZED GATES (for variational quantum circuits)
 // ============================================================================
 
-// pub use crate::gates::parameterized::{
-//     // Single-qubit parameterized rotations
-//     PhaseGate,
-//     RXGate,
-//     RYGate,
-//     RZGate,
-//     U3Gate,
-//     // Two-qubit parameterized rotations
-//     CRXGate,
-//     CRYGate,
-//     CRZGate,
-//     CPhaseParamGate,
-//     // Two-qubit entangling gates
-//     RXXGate,
-//     RYYGate,
-//     RZZGate,
-//     // Enums and helpers
-//     RotationAxis,
-// };
+pub use crate::gates::parameterized::{
+    // Single-qubit parameterized rotations
+    PhaseGate, RXGate, RYGate, RZGate, U3Gate,
+    // Two-qubit parameterized rotations
+    CRXGate, CRYGate, CRZGate, CPhaseParamGate,
+    // Two-qubit entangling gates
+    RXXGate, RYYGate, RZZGate,
+    // Enums and helpers
+    RotationAxis,
+};
 
 // ============================================================================
 // GATE UTILITIES
@@ -115,39 +107,31 @@ pub use crate::gates::utils::{flip_qubit, is_qubit_set, qubit_bit_position, qubi
 // };
 
 // ============================================================================
-// OPTIMIZATION (uncomment when implemented)
+// OPTIMIZATION
 // ============================================================================
 
-// pub use crate::optimization::{
-//     // Core optimization
-//     ParameterizedCircuit,
-//     Optimizer,
-//     OptimizerConfig,
-//     OptimizationResult,
-//     // Gradient methods
-//     GradientMethod,
-//     ParameterShift,
-//     FiniteDifference,
-//     // Optimizers
-//     GradientDescent,
-//     Adam,
-//     QuantumNaturalGradient,
-//     // Observables
-//     Observable,
-//     Pauli,
-//     PauliTerm,
-// };
+pub use crate::optimization::{
+    // Core optimization
+    Ansatz, AnsatzType, HardwareEfficientAnsatz, ParameterizedCircuit,
+    // Gradient methods
+    gradient::{FiniteDifference, GradientMethod, ParameterShift},
+    // Optimizers
+    optimizer::{Adam, GradientDescent, Optimizer, OptimizerResult},
+    qng::QuantumNaturalGradient,
+    // Observables
+    observable::{Observable, PauliObservable, PauliTerm},
+    // VQE
+    vqe::{VQE, VQEResult},
+};
 
 // ============================================================================
-// NOISE MODELS (uncomment when implemented)
+// NOISE MODELS
 // ============================================================================
 
-// pub use crate::noise::{
-//     NoiseModel,
-//     DepolarizingNoise,
-//     AmplitudeDamping,
-//     PhaseDamping,
-// };
+pub use crate::noise::{
+    AmplitudeDampingNoise, CompositeNoise, DepolarizingNoise, NoiseModel, NoiseParams,
+    PhaseDampingNoise, ThermalRelaxationNoise,
+};
 
 // ============================================================================
 // COMMON CONSTANTS

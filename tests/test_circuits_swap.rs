@@ -23,7 +23,7 @@ mod tests {
 
         // Execute on initial zero state
         let mut state = State::zero_state(3);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Expected result: |001⟩ (third qubit is now 1)
         assert!(state.probability(0) < 1e-10); // |000⟩
@@ -42,7 +42,7 @@ mod tests {
         inverse_circuit.swap(0, 2); // Apply swap again
 
         let mut state2 = State::zero_state(3);
-        inverse_circuit.execute(&mut state2);
+        inverse_circuit.execute(&mut state2).unwrap();
 
         // Expected result: |100⟩ (back to original state)
         assert!(state2.probability(4) > 0.99); // |100⟩ (binary 100 = decimal 4)
@@ -64,7 +64,7 @@ mod tests {
 
         // Execute circuit
         let mut state = State::zero_state(4);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Expected result: |0011⟩ (binary 0011 = decimal 3)
         assert!(state.probability(3) > 0.99);

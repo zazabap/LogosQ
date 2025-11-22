@@ -27,7 +27,7 @@ mod tests {
         let params = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]; // 8 parameters
         let circuit = ansatz.build_circuit(&params);
 
-        assert_eq!(circuit.num_qubits, 4);
+        assert_eq!(circuit.num_qubits(), 4);
         // Should have: 4 RY gates + 3 CNOTs + 4 RY gates = 11 gates
         // assert!(circuit.num_gates() > 0);
     }
@@ -49,7 +49,7 @@ mod tests {
         let circuit = ansatz.build_circuit(&params);
 
         // Full pattern on 3 qubits: 3 RY + 3 CNOTs (all pairs) + 3 RY
-        assert_eq!(circuit.operations.len(), 9);
+        assert_eq!(circuit.operations().len(), 9);
     }
 
     #[test]
@@ -76,7 +76,7 @@ mod tests {
 
         let params = vec![0.1; 9];
         let circuit = ansatz.build_circuit(&params);
-        assert_eq!(circuit.num_qubits, 3);
+        assert_eq!(circuit.num_qubits(), 3);
     }
 
     #[test]
@@ -109,7 +109,7 @@ mod tests {
 
         let params = vec![0.5, 1.0, 1.5];
         let circuit = ansatz.build_circuit(&params);
-        assert_eq!(circuit.num_qubits, 2);
+        assert_eq!(circuit.num_qubits(), 2);
     }
 
     #[test]

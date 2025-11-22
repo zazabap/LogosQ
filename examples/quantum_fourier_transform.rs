@@ -16,14 +16,14 @@ pub fn quantum_fourier_transform_example(num_qubits: usize) -> Vec<usize> {
     // Create a circuit that demonstrates QFT
     let mut circuit = Circuit::new(num_qubits);
     circuit.x(0);
-    circuit.execute(&mut state);
+    circuit.execute(&mut state).unwrap();
 
     // Apply QFT
     qft::apply(&mut state);
     print!("State after QFT: {}\n", state.visualize());
     qft::apply_inverse(&mut state);
     print!("State after inverse QFT: {}\n", state.visualize());
-    circuit.execute_and_measure()
+    circuit.execute_and_measure().unwrap()
 }
 
 pub fn qft_c2() {
@@ -38,5 +38,5 @@ pub fn qft_c2() {
     });
 
     // Measure all qubits
-    circuit.execute_and_measure();
+    circuit.execute_and_measure().unwrap();
 }

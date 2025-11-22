@@ -47,7 +47,7 @@ impl RXGate {
 
 impl Gate for RXGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         assert_eq!(n, self.num_qubits, "State qubit count mismatch");
 
         let cos_half = (self.theta / 2.0).cos();
@@ -57,7 +57,7 @@ impl Gate for RXGate {
         let stride = 1 << qubit_bit;
         let full_dim = 1 << n;
 
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for base in (0..full_dim).step_by(stride * 2) {
             for offset in 0..stride {
@@ -100,7 +100,7 @@ impl RYGate {
 
 impl Gate for RYGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         assert_eq!(n, self.num_qubits, "State qubit count mismatch");
 
         let cos_half = (self.theta / 2.0).cos();
@@ -110,7 +110,7 @@ impl Gate for RYGate {
         let stride = 1 << qubit_bit;
         let full_dim = 1 << n;
 
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for base in (0..full_dim).step_by(stride * 2) {
             for offset in 0..stride {
@@ -153,7 +153,7 @@ impl RZGate {
 
 impl Gate for RZGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         assert_eq!(n, self.num_qubits, "State qubit count mismatch");
 
         let phase_0 = Complex64::from_polar(1.0, -self.theta / 2.0);
@@ -163,7 +163,7 @@ impl Gate for RZGate {
         let mask = 1 << qubit_bit;
         let full_dim = 1 << n;
 
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             if (i & mask) == 0 {
@@ -198,7 +198,7 @@ impl PhaseGate {
 
 impl Gate for PhaseGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         assert_eq!(n, self.num_qubits, "State qubit count mismatch");
 
         let phase = Complex64::from_polar(1.0, self.theta);
@@ -207,7 +207,7 @@ impl Gate for PhaseGate {
         let mask = 1 << qubit_bit;
         let full_dim = 1 << n;
 
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             if (i & mask) != 0 {
@@ -248,7 +248,7 @@ impl U3Gate {
 
 impl Gate for U3Gate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         assert_eq!(n, self.num_qubits, "State qubit count mismatch");
 
         let cos_half = (self.theta / 2.0).cos();
@@ -264,7 +264,7 @@ impl Gate for U3Gate {
         let stride = 1 << qubit_bit;
         let full_dim = 1 << n;
 
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for base in (0..full_dim).step_by(stride * 2) {
             for offset in 0..stride {
@@ -310,7 +310,7 @@ impl CRXGate {
 
 impl Gate for CRXGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         assert_eq!(n, self.num_qubits, "State qubit count mismatch");
 
         let cos_half = (self.theta / 2.0).cos();
@@ -323,7 +323,7 @@ impl Gate for CRXGate {
         let target_mask = 1 << target_bit;
 
         let full_dim = 1 << n;
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             // Only apply when control is |1⟩ and target is |0⟩
@@ -367,7 +367,7 @@ impl CRYGate {
 
 impl Gate for CRYGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         assert_eq!(n, self.num_qubits, "State qubit count mismatch");
 
         let cos_half = (self.theta / 2.0).cos();
@@ -380,7 +380,7 @@ impl Gate for CRYGate {
         let target_mask = 1 << target_bit;
 
         let full_dim = 1 << n;
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             if (i & control_mask) != 0 && (i & target_mask) == 0 {
@@ -423,7 +423,7 @@ impl CRZGate {
 
 impl Gate for CRZGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         assert_eq!(n, self.num_qubits, "State qubit count mismatch");
 
         let control_bit = n - 1 - self.control;
@@ -436,7 +436,7 @@ impl Gate for CRZGate {
         let phase_1 = Complex64::from_polar(1.0, self.theta / 2.0);
 
         let full_dim = 1 << n;
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             if (i & control_mask) != 0 {
@@ -475,7 +475,7 @@ impl CPhaseParamGate {
 
 impl Gate for CPhaseParamGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         assert_eq!(n, self.num_qubits, "State qubit count mismatch");
 
         let control_bit = n - 1 - self.control;
@@ -488,7 +488,7 @@ impl Gate for CPhaseParamGate {
         let phase = Complex64::from_polar(1.0, self.theta);
 
         let full_dim = 1 << n;
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             if (i & both_mask) == both_mask {
@@ -527,7 +527,7 @@ impl RXXGate {
 
 impl Gate for RXXGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         assert_eq!(n, self.num_qubits, "State qubit count mismatch");
 
         let cos_half = (self.theta / 2.0).cos();
@@ -540,7 +540,7 @@ impl Gate for RXXGate {
         let mask2 = 1 << bit2;
 
         let full_dim = 1 << n;
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         // Process each basis state
         for i in 0..full_dim {
@@ -603,7 +603,7 @@ impl RYYGate {
 
 impl Gate for RYYGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         assert_eq!(n, self.num_qubits, "State qubit count mismatch");
 
         let cos_half = (self.theta / 2.0).cos();
@@ -616,7 +616,7 @@ impl Gate for RYYGate {
         let mask2 = 1 << bit2;
 
         let full_dim = 1 << n;
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             let bit1_val = (i & mask1) != 0;
@@ -678,7 +678,7 @@ impl RZZGate {
 
 impl Gate for RZZGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         assert_eq!(n, self.num_qubits, "State qubit count mismatch");
 
         let bit1 = n - 1 - self.qubit1;
@@ -688,7 +688,7 @@ impl Gate for RZZGate {
         let mask2 = 1 << bit2;
 
         let full_dim = 1 << n;
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             let bit1_val = (i & mask1) != 0;

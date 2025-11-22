@@ -20,7 +20,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![control1, control2, target], "Toffoli");
+        self.add_operation_unchecked(gate, vec![control1, control2, target], "Toffoli");
         self
     }
 }

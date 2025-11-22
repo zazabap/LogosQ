@@ -13,12 +13,12 @@ pub struct XGate {
 
 impl Gate for XGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         let qubit_bit = n - 1 - self.qubit;
         let stride = 1 << qubit_bit;
         let full_dim = 1 << n;
 
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for base in (0..full_dim).step_by(stride * 2) {
             for offset in 0..stride {
@@ -38,12 +38,12 @@ pub struct YGate {
 
 impl Gate for YGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         let qubit_bit = n - 1 - self.qubit;
         let stride = 1 << qubit_bit;
         let full_dim = 1 << n;
 
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for base in (0..full_dim).step_by(stride * 2) {
             for offset in 0..stride {
@@ -66,12 +66,12 @@ pub struct ZGate {
 
 impl Gate for ZGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         let qubit_bit = n - 1 - self.qubit;
         let mask = 1 << qubit_bit;
         let full_dim = 1 << n;
 
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             if (i & mask) != 0 {
@@ -89,13 +89,13 @@ pub struct HGate {
 
 impl Gate for HGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         let qubit_bit = n - 1 - self.qubit;
         let stride = 1 << qubit_bit;
         let full_dim = 1 << n;
 
         let sqrt_2_inv = Complex64::new(1.0 / SQRT_2, 0.0);
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for base in (0..full_dim).step_by(stride * 2) {
             for offset in 0..stride {
@@ -120,13 +120,13 @@ pub struct SGate {
 
 impl Gate for SGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         let qubit_bit = n - 1 - self.qubit;
         let mask = 1 << qubit_bit;
         let full_dim = 1 << n;
 
         let phase = Complex64::new(0.0, 1.0);
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             if (i & mask) != 0 {
@@ -144,13 +144,13 @@ pub struct TGate {
 
 impl Gate for TGate {
     fn apply(&self, state: &mut State) {
-        let n = state.num_qubits;
+        let n = state.num_qubits();
         let qubit_bit = n - 1 - self.qubit;
         let mask = 1 << qubit_bit;
         let full_dim = 1 << n;
 
         let phase = Complex64::from_polar(1.0, std::f64::consts::PI / 4.0);
-        let vector_slice = state.vector.as_slice_mut().unwrap();
+        let vector_slice = state.vector_mut().as_slice_mut().unwrap();
 
         for i in 0..full_dim {
             if (i & mask) != 0 {

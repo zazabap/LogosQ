@@ -305,7 +305,7 @@ mod tests {
         let circuit = ansatz.build_circuit(&params);
 
         let mut state = State::zero_state(2);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Should still be in |00⟩ state
         assert!((state.probability(0) - 1.0).abs() < 1e-10);
@@ -353,7 +353,7 @@ mod tests {
             let params = vec![0.1; ansatz.num_parameters()];
             let circuit = ansatz.build_circuit(&params);
 
-            assert_eq!(circuit.num_qubits, n_qubits);
+            assert_eq!(circuit.num_qubits(), n_qubits);
         }
     }
 

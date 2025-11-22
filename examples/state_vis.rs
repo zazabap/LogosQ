@@ -64,8 +64,8 @@ fn main() -> std::io::Result<()> {
 
         println!("\n|-⟩ state (Negative X-axis on Bloch Sphere):");
         let mut minus_state = State::zero_state(1);
-        minus_state.vector[0] = Complex64::new(FRAC_1_SQRT_2, 0.0);
-        minus_state.vector[1] = Complex64::new(-FRAC_1_SQRT_2, 0.0);
+        minus_state.vector_mut()[0] = Complex64::new(FRAC_1_SQRT_2, 0.0);
+        minus_state.vector_mut()[1] = Complex64::new(-FRAC_1_SQRT_2, 0.0);
         println!("{}", minus_state.visualize());
         minus_state.save_visualization("minus_state.svg")?;
         println!("Saved visualization to minus_state.svg");
@@ -77,16 +77,16 @@ fn main() -> std::io::Result<()> {
 
         println!("\n|i⟩ state (Positive Y-axis on Bloch Sphere):");
         let mut i_state = State::zero_state(1);
-        i_state.vector[0] = Complex64::new(FRAC_1_SQRT_2, 0.0);
-        i_state.vector[1] = Complex64::new(0.0, FRAC_1_SQRT_2);
+        i_state.vector_mut()[0] = Complex64::new(FRAC_1_SQRT_2, 0.0);
+        i_state.vector_mut()[1] = Complex64::new(0.0, FRAC_1_SQRT_2);
         println!("{}", i_state.visualize());
         i_state.save_visualization("i_state.svg")?;
         println!("Saved visualization to i_state.svg");
 
         println!("\n|-i⟩ state (Negative Y-axis on Bloch Sphere):");
         let mut neg_i_state = State::zero_state(1);
-        neg_i_state.vector[0] = Complex64::new(FRAC_1_SQRT_2, 0.0);
-        neg_i_state.vector[1] = Complex64::new(0.0, -FRAC_1_SQRT_2);
+        neg_i_state.vector_mut()[0] = Complex64::new(FRAC_1_SQRT_2, 0.0);
+        neg_i_state.vector_mut()[1] = Complex64::new(0.0, -FRAC_1_SQRT_2);
         println!("{}", neg_i_state.visualize());
         neg_i_state.save_visualization("neg_i_state.svg")?;
         println!("Saved visualization to neg_i_state.svg");
@@ -102,8 +102,8 @@ fn main() -> std::io::Result<()> {
         let theta = PI / 4.0; // 45 degrees from Z-axis
         let phi = PI / 3.0; // 60 degrees azimuthal angle
 
-        arbitrary_state1.vector[0] = Complex64::new(theta.cos(), 0.0);
-        arbitrary_state1.vector[1] =
+        arbitrary_state1.vector_mut()[0] = Complex64::new(theta.cos(), 0.0);
+        arbitrary_state1.vector_mut()[1] =
             Complex64::new(theta.sin() * phi.cos(), theta.sin() * phi.sin());
         arbitrary_state1.normalize();
         println!("{}", arbitrary_state1.visualize());
@@ -116,8 +116,8 @@ fn main() -> std::io::Result<()> {
         let theta = 2.0 * PI / 3.0; // 120 degrees from Z-axis
         let phi = 3.0 * PI / 4.0; // 135 degrees azimuthal angle
 
-        arbitrary_state2.vector[0] = Complex64::new(theta.cos(), 0.0);
-        arbitrary_state2.vector[1] =
+        arbitrary_state2.vector_mut()[0] = Complex64::new(theta.cos(), 0.0);
+        arbitrary_state2.vector_mut()[1] =
             Complex64::new(theta.sin() * phi.cos(), theta.sin() * phi.sin());
         arbitrary_state2.normalize();
         println!("{}", arbitrary_state2.visualize());

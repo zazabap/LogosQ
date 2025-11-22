@@ -58,7 +58,7 @@ fn apply_oracle(circuit: &mut Circuit, target_state: usize, num_qubits: usize) {
     // For a 3-qubit system, we can use Toffoli (CCZ) plus some H gates
     if num_qubits == 3 {
         circuit.h(2);
-        circuit.add_operation(toffoli_gate(), vec![0, 1, 2], "CCZ");
+        circuit.add_operation(toffoli_gate(), vec![0, 1, 2], "CCZ").unwrap();
         circuit.h(2);
     } else {
         // For larger systems, we would need a more general approach
@@ -95,7 +95,7 @@ fn apply_diffusion(circuit: &mut Circuit, num_qubits: usize) {
     // Apply multi-controlled Z gate (inversion about the mean)
     if num_qubits == 3 {
         circuit.h(2);
-        circuit.add_operation(toffoli_gate(), vec![0, 1, 2], "CCZ");
+        circuit.add_operation(toffoli_gate(), vec![0, 1, 2], "CCZ").unwrap();
         circuit.h(2);
     } else {
         // For larger systems, use a generalized approach
@@ -129,7 +129,7 @@ fn apply_multi_controlled_not(circuit: &mut Circuit, controls: &[usize], target:
             toffoli_gate(),
             vec![controls[0], controls[1], target],
             "Toffoli",
-        );
+        ).unwrap();
     } else {
         // For more control qubits, this would require a more complex implementation
         // using ancilla qubits and gate decomposition

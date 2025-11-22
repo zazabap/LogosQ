@@ -35,7 +35,8 @@ impl Circuit {
 
         // For a 2-qubit system, add the matrix directly
         if self.num_qubits == 2 {
-            self.add_matrix_gate(gate_matrix, vec![q1, q2], name);
+            self.add_matrix_gate(gate_matrix, vec![q1, q2], name)
+                .expect("Failed to add two-qubit gate");
             return;
         }
 
@@ -76,7 +77,8 @@ impl Circuit {
             }
         }
 
-        self.add_matrix_gate(full_matrix, (0..self.num_qubits).collect(), name);
+        self.add_matrix_gate(full_matrix, (0..self.num_qubits).collect(), name)
+            .expect("Failed to add two-qubit gate");
     }
 
     /// Adds a CNOT gate to the circuit - OPTIMIZED
@@ -93,7 +95,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![control, target], "CNOT");
+        self.add_operation_unchecked(gate, vec![control, target], "CNOT");
         self
     }
 
@@ -111,7 +113,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![qubit1, qubit2], "SWAP");
+        self.add_operation_unchecked(gate, vec![qubit1, qubit2], "SWAP");
         self
     }
 
@@ -129,7 +131,7 @@ impl Circuit {
             num_qubits: self.num_qubits,
         };
 
-        self.add_operation(gate, vec![control, target], "CZ");
+        self.add_operation_unchecked(gate, vec![control, target], "CZ");
         self
     }
 }

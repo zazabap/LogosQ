@@ -63,10 +63,10 @@ impl QuantumNaturalGradient {
                 let mut state_mm = State::zero_state(ansatz.num_qubits());
                 ansatz.apply(&mut state_mm, &params_mm);
 
-                let overlap_pp = state_pp.inner_product_parallel(&state_pp).norm();
-                let overlap_pm = state_pp.inner_product_parallel(&state_pm).norm();
-                let overlap_mp = state_mp.inner_product_parallel(&state_pp).norm();
-                let overlap_mm = state_mm.inner_product_parallel(&state_mm).norm();
+                let overlap_pp = state_pp.inner_product_parallel(&state_pp).unwrap().norm();
+                let overlap_pm = state_pp.inner_product_parallel(&state_pm).unwrap().norm();
+                let overlap_mp = state_mp.inner_product_parallel(&state_pp).unwrap().norm();
+                let overlap_mm = state_mm.inner_product_parallel(&state_mm).unwrap().norm();
 
                 // Metric tensor element
                 let g_ij = (overlap_pp - overlap_pm - overlap_mp + overlap_mm) / 8.0;

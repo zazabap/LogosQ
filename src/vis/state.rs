@@ -9,20 +9,21 @@ use std::io::{Error, ErrorKind, Result};
 impl Visualizable for State {
     fn visualize(&self) -> String {
         // Simple text-based visualization
+        let num_qubits = self.num_qubits();
         let mut output = format!(
             "Quantum State: {} qubit{}\n\n",
-            self.num_qubits,
-            if self.num_qubits != 1 { "s" } else { "" }
+            num_qubits,
+            if num_qubits != 1 { "s" } else { "" }
         );
 
         // Show only states with non-negligible probability
-        for (i, amplitude) in self.vector.iter().enumerate() {
+        for (i, amplitude) in self.vector().iter().enumerate() {
             let probability = amplitude.norm_sqr();
             if probability > 1e-10 {
                 let basis = format!(
                     "{}{}{}",
                     "|",
-                    format!("{:0width$b}", i, width = self.num_qubits),
+                    format!("{:0width$b}", i, width = num_qubits),
                     ">"
                 );
                 output.push_str(&format!(
@@ -33,7 +34,7 @@ impl Visualizable for State {
         }
 
         // Add Bloch coordinates for single-qubit states
-        if self.num_qubits == 1 {
+        if num_qubits == 1 {
             let (x, y, z) = self.calculate_bloch_coordinates();
             output.push_str(&format!(
                 "\nBloch coordinates: (x={:.4}, y={:.4}, z={:.4})\n",
@@ -45,7 +46,7 @@ impl Visualizable for State {
     }
 
     fn visualize_as_svg(&self) -> String {
-        if self.num_qubits != 1 {
+        if self.num_qubits() != 1 {
             return "3D Bloch sphere visualization is only available for single-qubit states."
                 .to_string();
         }
@@ -54,7 +55,7 @@ impl Visualizable for State {
     }
 
     fn save_visualization(&self, filename: &str) -> Result<()> {
-        if self.num_qubits == 1 {
+        if self.num_qubits() == 1 {
             self.plot_bloch_sphere_3d(filename)
         } else {
             // Return an error for multi-qubit states
@@ -339,8 +340,9 @@ impl State {
         }
 
         // Add state info
-        let alpha = self.vector[0];
-        let beta = self.vector[1];
+        let state_vec = self.vector();
+        let alpha = state_vec[0];
+        let beta = state_vec[1];
         let state_text = format!(
             "|ψ⟩ = {:.3}{:+.3}i|0⟩ + {:.3}{:+.3}i|1⟩",
             alpha.re, alpha.im, beta.re, beta.im
@@ -370,12 +372,13 @@ impl State {
     // Helper method to calculate Bloch coordinates
     fn calculate_bloch_coordinates(&self) -> (f64, f64, f64) {
         assert_eq!(
-            self.num_qubits, 1,
+            self.num_qubits(), 1,
             "Bloch coordinates only defined for 1 qubit"
         );
 
-        let alpha = self.vector[0];
-        let beta = self.vector[1];
+        let state_vec = self.vector();
+        let alpha = state_vec[0];
+        let beta = state_vec[1];
 
         let x = 2.0 * (alpha.conj() * beta + alpha * beta.conj()).re;
         let y = 2.0 * (alpha.conj() * beta - alpha * beta.conj()).im;

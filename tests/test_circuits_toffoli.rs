@@ -18,7 +18,7 @@ mod tests {
 
         // Execute on initial zero state
         let mut state = State::zero_state(3);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Expected result: |111⟩ (all qubits are 1)
         assert!(state.probability(0) < 1e-10); // |000⟩
@@ -36,7 +36,7 @@ mod tests {
         circuit2.toffoli(0, 1, 2);
 
         let mut state2 = State::zero_state(3);
-        circuit2.execute(&mut state2);
+        circuit2.execute(&mut state2).unwrap();
 
         // Expected result: |100⟩ (only first qubit is 1)
         assert!(state2.probability(4) > 0.99); // |100⟩ (binary 100 = decimal 4)
@@ -52,7 +52,7 @@ mod tests {
         circuit1.toffoli(0, 1, 2);
 
         let mut state1 = State::zero_state(3);
-        circuit1.execute(&mut state1);
+        circuit1.execute(&mut state1).unwrap();
 
         // Expected: |111⟩ (target flipped)
         assert!(state1.probability(7) > 0.99);
@@ -63,7 +63,7 @@ mod tests {
         circuit2.toffoli(1, 0, 2);
 
         let mut state2 = State::zero_state(3);
-        circuit2.execute(&mut state2);
+        circuit2.execute(&mut state2).unwrap();
 
         // Expected: |111⟩ (target should still be flipped)
         assert!(state2.probability(7) > 0.99);
@@ -81,7 +81,7 @@ mod tests {
         circuit.toffoli(0, 4, 2);
 
         let mut state = State::zero_state(5);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Expected result: |10101⟩ (qubits 0, 2, and 4 are 1)
         // Binary: qubit 0=1, qubit 1=0, qubit 2=1, qubit 3=0, qubit 4=1
@@ -122,7 +122,7 @@ mod tests {
         circuit.toffoli(0, 1, 2);
 
         let mut state = State::zero_state(3);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Expected: 1/√2 (|010⟩ + |111⟩)
         // The target flips only when first control is |1⟩
@@ -159,7 +159,7 @@ mod tests {
         half_adder.cnot(0, 1);
 
         let mut state = State::zero_state(4);
-        half_adder.execute(&mut state);
+        half_adder.execute(&mut state).unwrap();
 
         // For inputs a=1, b=1:
         // Step by step:
@@ -193,7 +193,7 @@ mod tests {
         not_circuit.toffoli(0, 1, 2); // Apply Toffoli (acts as NOT on qubit 2)
 
         let mut not_state = State::zero_state(3);
-        not_circuit.execute(&mut not_state);
+        not_circuit.execute(&mut not_state).unwrap();
 
         // Expected: |111⟩ (target qubit flipped)
         assert!(not_state.probability(7) > 0.99);
@@ -205,7 +205,7 @@ mod tests {
         cnot_circuit.toffoli(0, 1, 2); // Apply Toffoli (acts as CNOT from qubit 1 to 2)
 
         let mut cnot_state = State::zero_state(3);
-        cnot_circuit.execute(&mut cnot_state);
+        cnot_circuit.execute(&mut cnot_state).unwrap();
 
         // Expected: |111⟩ (target qubit flipped because both controls were |1⟩)
         assert!(
@@ -233,7 +233,7 @@ mod tests {
         circuit.toffoli(2, 3, 4);
 
         let mut state = State::zero_state(5);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // After first Toffoli: |11110⟩ (qubit 3 flipped because 0,1 are both 1)
         // After second Toffoli: |11111⟩ (qubit 4 flipped because 2,3 are both 1)
@@ -263,7 +263,7 @@ mod tests {
         circuit.toffoli(1, 2, 3);
 
         let mut state = State::zero_state(4);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // After Bell state: (|0000⟩ + |1100⟩)/√2
         // After X(2): (|0010⟩ + |1110⟩)/√2
@@ -308,7 +308,7 @@ mod tests {
         circuit.toffoli(0, 1, 2).toffoli(0, 1, 2);
 
         let mut state = State::zero_state(3);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Expected result: |110⟩ (back to the original state)
         assert!(state.probability(6) > 0.99); // |110⟩ = decimal 6
@@ -338,7 +338,7 @@ mod tests {
         circuit.toffoli(0, 1, 2);
 
         let mut state = State::zero_state(3);
-        circuit.execute(&mut state);
+        circuit.execute(&mut state).unwrap();
 
         // Expected result: |011⟩ (first qubit is 0, second and third are 1)
         assert!(
