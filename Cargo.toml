@@ -1,6 +1,6 @@
 [package]
 name = "logosq"
-version = "0.1.12"
+version = "0.2.1"
 edition = "2021"
 authors = ["Shiwen An <an.s.aa@m.titech.ac.jp>"]
 license = "MIT"
