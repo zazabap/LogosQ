@@ -2,6 +2,7 @@
 
 use crate::circuits::Circuit;
 use crate::states::State;
+use num_complex::Complex64;
 use std::f64::consts::PI;
 
 /// Parameters for the XYZ-Heisenberg model
@@ -164,64 +165,79 @@ pub fn calculate_energy_efficient(state: &State, params: &HeisenbergParameters) 
 }
 
 /// Calculate expectation value of X_i X_j
+/// Efficient direct computation: ⟨ψ|X_i X_j|ψ⟩ = Σ_k ψ_k* · ψ_{k XOR (1<<i) XOR (1<<j)}
 fn expectation_xx(state: &State, i: usize, j: usize) -> f64 {
-    let mut state_copy = state.clone();
-
-    // Create a temporary circuit to apply X gates to specific qubits
-    let mut circuit = Circuit::new(state.num_qubits());
-    circuit.x(i);
-    circuit.x(j);
-
-    // Execute the circuit on our state copy
-    circuit.execute(&mut state_copy).expect("Circuit execution failed");
-
-    // Calculate inner product
-    state.vector().dot(state_copy.vector()).re
+    let vector = state.vector();
+    let n = state.num_qubits();
+    let mask_i = 1 << (n - 1 - i);
+    let mask_j = 1 << (n - 1 - j);
+    
+    let mut result = Complex64::new(0.0, 0.0);
+    for k in 0..vector.len() {
+        let flipped = k ^ mask_i ^ mask_j;
+        result += vector[k].conj() * vector[flipped];
+    }
+    result.re
 }
 
 /// Calculate expectation value of Y_i Y_j
+/// Efficient direct computation: ⟨ψ|Y_i Y_j|ψ⟩ = Σ_k ψ_k* · phase · ψ_{k XOR (1<<i) XOR (1<<j)}
+/// where phase = i if bit_i=0 else -i, times i if bit_j=0 else -i
+/// This is because Y|0⟩ = i|1⟩ and Y|1⟩ = -i|0⟩
 fn expectation_yy(state: &State, i: usize, j: usize) -> f64 {
-    let mut state_copy = state.clone();
-
-    // Create a temporary circuit to apply Y gates to specific qubits
-    let mut circuit = Circuit::new(state.num_qubits());
-    circuit.y(i);
-    circuit.y(j);
-
-    // Execute the circuit on our state copy
-    circuit.execute(&mut state_copy).expect("Circuit execution failed");
-
-    // Calculate inner product
-    state.vector().dot(state_copy.vector()).re
+    let vector = state.vector();
+    let n = state.num_qubits();
+    let mask_i = 1 << (n - 1 - i);
+    let mask_j = 1 << (n - 1 - j);
+    
+    let mut result = Complex64::new(0.0, 0.0);
+    for k in 0..vector.len() {
+        let bit_i = (k & mask_i) != 0;
+        let bit_j = (k & mask_j) != 0;
+        let flipped = k ^ mask_i ^ mask_j;
+        
+        // Y_i phase: i if bit_i=0 (|0⟩ -> i|1⟩), -i if bit_i=1 (|1⟩ -> -i|0⟩)
+        // Y_j phase: i if bit_j=0, -i if bit_j=1
+        // Since Y_i and Y_j commute, the total phase is the product
+        let phase_i = if bit_i { Complex64::new(0.0, -1.0) } else { Complex64::new(0.0, 1.0) };
+        let phase_j = if bit_j { Complex64::new(0.0, -1.0) } else { Complex64::new(0.0, 1.0) };
+        let phase = phase_i * phase_j;
+        
+        result += vector[k].conj() * phase * vector[flipped];
+    }
+    result.re
 }
 
 /// Calculate expectation value of Z_i Z_j
+/// Efficient direct computation: ⟨ψ|Z_i Z_j|ψ⟩ = Σ_k |ψ_k|^2 · (-1)^{bit_i + bit_j}
 fn expectation_zz(state: &State, i: usize, j: usize) -> f64 {
-    let mut state_copy = state.clone();
-
-    // Create a temporary circuit to apply Z gates to specific qubits
-    let mut circuit = Circuit::new(state.num_qubits());
-    circuit.z(i);
-    circuit.z(j);
-
-    // Execute the circuit on our state copy
-    circuit.execute(&mut state_copy).expect("Circuit execution failed");
-
-    // Calculate inner product
-    state.vector().dot(state_copy.vector()).re
+    let vector = state.vector();
+    let n = state.num_qubits();
+    let mask_i = 1 << (n - 1 - i);
+    let mask_j = 1 << (n - 1 - j);
+    
+    let mut result = 0.0;
+    for k in 0..vector.len() {
+        let bit_i = (k & mask_i) != 0;
+        let bit_j = (k & mask_j) != 0;
+        let sign = if (bit_i as usize + bit_j as usize) % 2 == 0 { 1.0 } else { -1.0 };
+        result += vector[k].norm_sqr() * sign;
+    }
+    result
 }
 
 /// Calculate expectation value of Z_i
+/// Efficient direct computation: ⟨ψ|Z_i|ψ⟩ = Σ_k |ψ_k|^2 · (-1)^{bit_i}
 fn expectation_z(state: &State, i: usize) -> f64 {
-    let mut state_copy = state.clone();
-
-    // Create a temporary circuit to apply Z gate to specific qubit
-    let mut circuit = Circuit::new(state.num_qubits());
-    circuit.z(i);
-
-    // Execute the circuit on our state copy
-    circuit.execute(&mut state_copy).expect("Circuit execution failed");
-
-    // Calculate inner product
-    state.vector().dot(state_copy.vector()).re
+    let vector = state.vector();
+    let n = state.num_qubits();
+    let mask_i = 1 << (n - 1 - i);
+    
+    let mut result = 0.0;
+    for k in 0..vector.len() {
+        let bit_i = (k & mask_i) != 0;
+        let sign = if bit_i { -1.0 } else { 1.0 };
+        result += vector[k].norm_sqr() * sign;
+    }
+    result
 }
