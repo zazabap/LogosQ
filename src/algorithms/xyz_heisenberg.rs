@@ -3,7 +3,6 @@
 use crate::circuits::Circuit;
 use crate::states::State;
 use num_complex::Complex64;
-use std::f64::consts::PI;
 
 /// Parameters for the XYZ-Heisenberg model
 pub struct HeisenbergParameters {
@@ -68,28 +67,18 @@ pub fn simulate(state: &mut State, params: &HeisenbergParameters) {
 
 // Helper functions for adding interactions
 fn add_xx_interaction(circuit: &mut Circuit, qubit1: usize, qubit2: usize, strength: f64) {
-    // Implementation of e^(-i * strength * X⊗X)
-    circuit.h(qubit1);
-    circuit.h(qubit2);
-    add_zz_interaction(circuit, qubit1, qubit2, strength);
-    circuit.h(qubit1);
-    circuit.h(qubit2);
+    // Direct exp(-i * strength * X⊗X) using the native RXX rotation (angle convention matches 2*strength)
+    circuit.rxx(qubit1, qubit2, 2.0 * strength);
 }
 
 fn add_yy_interaction(circuit: &mut Circuit, qubit1: usize, qubit2: usize, strength: f64) {
-    // Implementation of e^(-i * strength * Y⊗Y)
-    circuit.rx(qubit1, PI / 2.0);
-    circuit.rx(qubit2, PI / 2.0);
-    add_zz_interaction(circuit, qubit1, qubit2, strength);
-    circuit.rx(qubit1, -PI / 2.0);
-    circuit.rx(qubit2, -PI / 2.0);
+    // Direct exp(-i * strength * Y⊗Y)
+    circuit.ryy(qubit1, qubit2, 2.0 * strength);
 }
 
 fn add_zz_interaction(circuit: &mut Circuit, qubit1: usize, qubit2: usize, strength: f64) {
-    // Implementation of e^(-i * strength * Z⊗Z)
-    circuit.cnot(qubit1, qubit2);
-    circuit.rz(qubit2, 2.0 * strength);
-    circuit.cnot(qubit1, qubit2);
+    // Direct exp(-i * strength * Z⊗Z)
+    circuit.rzz(qubit1, qubit2, 2.0 * strength);
 }
 
 /// Calculate energy of the XYZ-Heisenberg model for a given state

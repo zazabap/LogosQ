@@ -26,7 +26,7 @@ fn main() {
     println!("{}", "=".repeat(70));
     println!();
 
-    let num_qubits = 4;
+    let num_qubits = 10;
 
     // ============================================================================
     // Example 1: Isotropic Heisenberg Model (Jx = Jy = Jz = 1.0)

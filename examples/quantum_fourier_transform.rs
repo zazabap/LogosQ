@@ -179,7 +179,11 @@ fn swap_qubits(state: &mut MpsState, left: usize, right: usize) {
         return;
     }
 
-    let (left_idx, mut right_idx) = if left < right { (left, right) } else { (right, left) };
+    let (left_idx, mut right_idx) = if left < right {
+        (left, right)
+    } else {
+        (right, left)
+    };
     assert!(
         right_idx < state.num_qubits(),
         "Swap indices must be within range"
