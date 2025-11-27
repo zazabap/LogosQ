@@ -220,7 +220,7 @@ impl MpsState {
         // Reshape theta into matrix (left_dim * PHYSICAL_DIM) x (PHYSICAL_DIM * right_dim)
         let rows = left_dim * PHYSICAL_DIM;
         let cols = PHYSICAL_DIM * right_dim;
-        let dm = DMatrix::from_vec(rows, cols, theta);
+        let dm = DMatrix::from_row_slice(rows, cols, &theta);
         let svd = SVD::new(dm, true, true);
         let u = svd.u.expect("SVD without U");
         let v_t = svd.v_t.expect("SVD without V");
@@ -253,8 +253,8 @@ impl MpsState {
             for r in 0..right_dim {
                 for t in 0..PHYSICAL_DIM {
                     let col = t * right_dim + r;
-                    // Convert V† back to V
-                    let v_entry = v_t[(alpha, col)].conj();
+                    // Directly use V† entries provided by nalgebra.
+                    let v_entry = v_t[(alpha, col)];
                     right_tensor_new[[alpha, t, r]] = sqrt_sigma * v_entry;
                 }
             }

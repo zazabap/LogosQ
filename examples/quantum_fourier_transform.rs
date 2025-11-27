@@ -119,7 +119,7 @@ fn apply_qft_mps(state: &mut MpsState) {
     }
 
     for i in 0..num_qubits / 2 {
-        state.apply_swap_gate(i);
+        swap_qubits(state, i, num_qubits - 1 - i);
     }
 }
 
@@ -127,7 +127,7 @@ fn apply_inverse_qft_mps(state: &mut MpsState) {
     let num_qubits = state.num_qubits();
 
     for i in 0..num_qubits / 2 {
-        state.apply_swap_gate(i);
+        swap_qubits(state, i, num_qubits - 1 - i);
     }
 
     for i in (0..num_qubits).rev() {
@@ -171,6 +171,36 @@ fn print_run_summary(run: &QftRun, num_qubits: usize) {
     sorted.sort_by_key(|(state, _)| *state);
     for (state, count) in sorted {
         println!("|{:0width$b}⟩ : {}", state, count, width = num_qubits);
+    }
+}
+
+fn swap_qubits(state: &mut MpsState, left: usize, right: usize) {
+    if left == right {
+        return;
+    }
+
+    let (left_idx, mut right_idx) = if left < right { (left, right) } else { (right, left) };
+    assert!(
+        right_idx < state.num_qubits(),
+        "Swap indices must be within range"
+    );
+
+    // Bring the right qubit next to the left qubit using nearest-neighbor swaps,
+    // tracking the swap locations so we can restore the intermediate ordering later.
+    let mut swaps = Vec::new();
+    while right_idx > left_idx + 1 {
+        let swap_site = right_idx - 1;
+        state.apply_swap_gate(swap_site);
+        swaps.push(swap_site);
+        right_idx -= 1;
+    }
+
+    // Swap the now-adjacent qubits.
+    state.apply_swap_gate(left_idx);
+
+    // Undo the temporary swaps in reverse order to restore intermediate qubits.
+    for site in swaps.into_iter().rev() {
+        state.apply_swap_gate(site);
     }
 }
 

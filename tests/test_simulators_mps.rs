@@ -105,6 +105,53 @@ fn test_mps_two_qubit_gate_matches_dense_cz() {
 }
 
 #[test]
+fn test_mps_two_qubit_gate_on_entangled_state_matches_dense_sequence() {
+    // Dense reference that generates an entangled intermediate state before a second two-qubit gate
+    let mut dense_state = State::zero_state(2);
+    let mut circuit = Circuit::new(2);
+    circuit.h(0);
+    circuit.rx(1, 0.37);
+    circuit
+        .add_operation(cnot_gate(), vec![0, 1], "CNOT")
+        .expect("Failed to add CNOT");
+    circuit.ry(0, -0.81);
+    circuit
+        .add_operation(cz_gate(), vec![0, 1], "CZ")
+        .expect("Failed to add CZ");
+    circuit
+        .execute(&mut dense_state)
+        .expect("Dense entangled sequence failed");
+    let dense_vector = dense_state.vector().to_vec();
+
+    // Apply the same sequence via the MPS backend
+    let mut mps_state = MpsState::zero_state(
+        2,
+        MpsConfig {
+            max_bond_dim: 8,
+            truncation_threshold: 1e-12,
+        },
+    );
+    let h = h_gate();
+    mps_state.apply_single_qubit(0, &h.matrix);
+    let rx = rx_gate(0.37);
+    mps_state.apply_single_qubit(1, &rx.matrix);
+    let cnot = cnot_gate();
+    mps_state.apply_two_qubit(0, &cnot.matrix);
+    let ry = ry_gate(-0.81);
+    mps_state.apply_single_qubit(0, &ry.matrix);
+    let cz = cz_gate();
+    mps_state.apply_two_qubit(0, &cz.matrix);
+
+    let mps_vector = mps_state.to_state_vector();
+    for (idx, (dense_amp, mps_amp)) in dense_vector.iter().zip(&mps_vector).enumerate() {
+        assert!(
+            (*dense_amp - *mps_amp).norm() < 1e-10,
+            "Entangled two-qubit sequence mismatch at basis {idx}: dense={dense_amp}, mps={mps_amp}"
+        );
+    }
+}
+
+#[test]
 fn test_mps_field_only_evolution_matches_dense_result() {
     let params = HeisenbergParameters {
         jx: 0.0,
