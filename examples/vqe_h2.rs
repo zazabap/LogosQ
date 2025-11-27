@@ -13,14 +13,14 @@
 
 use logosq::circuits::Circuit;
 use logosq::optimization::ansatz::{
-    Ansatz, EfficientSU2Ansatz, HardwareEfficientAnsatz, ParameterizedCircuit, RealAmplitudesAnsatz,
-    EntanglingGate, EntanglingPattern,
+    Ansatz, EfficientSU2Ansatz, EntanglingGate, EntanglingPattern, HardwareEfficientAnsatz,
+    ParameterizedCircuit, RealAmplitudesAnsatz,
 };
 use logosq::optimization::gradient::{FiniteDifference, GradientMethod, ParameterShift};
-use logosq::optimization::observable::{Observable, PauliObservable, PauliTerm, Pauli};
+use logosq::optimization::observable::{Observable, Pauli, PauliObservable, PauliTerm};
 use logosq::optimization::optimizer::{Adam, GradientDescent};
 use logosq::optimization::qng::QuantumNaturalGradient;
-use logosq::optimization::vqe::{VQE, VQEResult};
+use logosq::optimization::vqe::{VQEResult, VQE};
 use logosq::states::State;
 use ndarray::Array2;
 use num_complex::Complex64;
@@ -60,7 +60,7 @@ fn create_h2_hamiltonian() -> PauliObservable {
     let mut hamiltonian = PauliObservable::new(num_qubits);
 
     // Identity term (nuclear repulsion + constant offset from JW transformation)
-    // This includes: nuclear repulsion energy (1/R) + constant terms from 
+    // This includes: nuclear repulsion energy (1/R) + constant terms from
     // transforming fermionic operators to Pauli operators
     hamiltonian.add_term(PauliTerm::new(
         -0.8097,
@@ -147,29 +147,28 @@ fn create_h2_hamiltonian() -> PauliObservable {
 fn compute_exact_ground_state_energy(hamiltonian: &PauliObservable) -> f64 {
     let n = hamiltonian.num_qubits;
     let dim = 1 << n;
-    
+
     // Build the full matrix representation
     let mut matrix = Array2::<Complex64>::zeros((dim, dim));
-    
+
     // Iterate over each Pauli term and add its contribution
     for term in &hamiltonian.terms {
-        let pauli_matrices: Vec<Array2<Complex64>> = term.paulis.iter()
-            .map(|p| p.matrix())
-            .collect();
-        
+        let pauli_matrices: Vec<Array2<Complex64>> =
+            term.paulis.iter().map(|p| p.matrix()).collect();
+
         // Build the tensor product of all Pauli matrices
         let mut term_matrix = Array2::<Complex64>::ones((1, 1));
         for pauli_mat in &pauli_matrices {
             // Compute Kronecker product: term_matrix ⊗ pauli_mat
             let (rows1, cols1) = (term_matrix.shape()[0], term_matrix.shape()[1]);
             let (rows2, cols2) = (pauli_mat.shape()[0], pauli_mat.shape()[1]);
-            
+
             let mut new_matrix = Array2::<Complex64>::zeros((rows1 * rows2, cols1 * cols2));
             for i in 0..rows1 {
                 for j in 0..cols1 {
                     for k in 0..rows2 {
                         for l in 0..cols2 {
-                            new_matrix[[i * rows2 + k, j * cols2 + l]] = 
+                            new_matrix[[i * rows2 + k, j * cols2 + l]] =
                                 term_matrix[[i, j]] * pauli_mat[[k, l]];
                         }
                     }
@@ -177,7 +176,7 @@ fn compute_exact_ground_state_energy(hamiltonian: &PauliObservable) -> f64 {
             }
             term_matrix = new_matrix;
         }
-        
+
         // Add this term to the full Hamiltonian (scaled by coefficient)
         for i in 0..dim {
             for j in 0..dim {
@@ -185,7 +184,7 @@ fn compute_exact_ground_state_energy(hamiltonian: &PauliObservable) -> f64 {
             }
         }
     }
-    
+
     // For a 16x16 matrix, we can compute eigenvalues more directly
     // Use inverse power iteration with shift to find minimum eigenvalue
     // First, find an upper bound for eigenvalues
@@ -193,15 +192,15 @@ fn compute_exact_ground_state_energy(hamiltonian: &PauliObservable) -> f64 {
     for i in 0..dim {
         max_eigenvalue = max_eigenvalue.max(matrix[[i, i]].re);
     }
-    
+
     // Use shift so that (H - shift*I) has negative eigenvalues
     // Then apply inverse power iteration to find the eigenvalue closest to shift
-    let shift = max_eigenvalue + 10.0;  // Shift to ensure all eigenvalues are negative
+    let shift = max_eigenvalue + 10.0; // Shift to ensure all eigenvalues are negative
     let mut shifted_matrix = matrix.clone();
     for i in 0..dim {
         shifted_matrix[[i, i]] -= Complex64::new(shift, 0.0);
     }
-    
+
     // Initialize random state
     use rand::Rng;
     let mut rng = rand::thread_rng();
@@ -209,17 +208,17 @@ fn compute_exact_ground_state_energy(hamiltonian: &PauliObservable) -> f64 {
     for i in 0..dim {
         state_vec[[i, 0]] = Complex64::new(rng.gen::<f64>(), rng.gen::<f64>());
     }
-    
+
     // Normalize (unused for now, but kept for future inverse power iteration)
     let _norm: f64 = state_vec.iter().map(|x| x.norm_sqr()).sum::<f64>().sqrt();
-    
+
     // Inverse power iteration: solve (H - shift*I) * x = state_vec
     // Since we don't have a direct solver, use iterative refinement
     // Actually, for small matrices, we can use a simple approach:
     // Try many random states and minimize Rayleigh quotient
-    
+
     let mut min_energy = f64::INFINITY;
-    
+
     // Try all computational basis states
     for i in 0..dim {
         let mut state = State::zero_state(n);
@@ -227,7 +226,7 @@ fn compute_exact_ground_state_energy(hamiltonian: &PauliObservable) -> f64 {
         let energy = hamiltonian.expectation(&state);
         min_energy = min_energy.min(energy);
     }
-    
+
     // Use power iteration with Rayleigh quotient to find minimum eigenvalue
     // Start from the best computational basis state
     let mut best_state_idx = 0;
@@ -242,11 +241,11 @@ fn compute_exact_ground_state_energy(hamiltonian: &PauliObservable) -> f64 {
         }
     }
     min_energy = best_basis_energy;
-    
+
     // Initialize state vector from best computational basis state
     let mut state_vec = Array2::<Complex64>::zeros((dim, 1));
     state_vec[[best_state_idx, 0]] = Complex64::new(1.0, 0.0);
-    
+
     // Power iteration to find ground state (minimum eigenvalue)
     // For minimum eigenvalue, we use: (H - λ_max*I) has negative eigenvalues
     // The minimum eigenvalue of H corresponds to maximum eigenvalue of (λ_max*I - H)
@@ -261,27 +260,27 @@ fn compute_exact_ground_state_energy(hamiltonian: &PauliObservable) -> f64 {
             };
         }
     }
-    
+
     // Power iteration on transformed matrix to find maximum eigenvalue
     for iteration in 0..200 {
         let new_state = transformed_matrix.dot(&state_vec);
         let norm: f64 = new_state.iter().map(|x| x.norm_sqr()).sum::<f64>().sqrt();
         state_vec = &new_state / norm;
-        
+
         // Compute Rayleigh quotient for transformed matrix
         let numerator = (state_vec.t().dot(&transformed_matrix.dot(&state_vec)))[[0, 0]];
         let transformed_max_eigenval = numerator.re;
-        
+
         // Convert back to minimum eigenvalue of original matrix
         let current_min_energy = lambda_max - transformed_max_eigenval;
         min_energy = min_energy.min(current_min_energy);
-        
+
         // Check convergence
         if iteration > 10 && (current_min_energy - min_energy).abs() < 1e-8 {
             break;
         }
     }
-    
+
     min_energy
 }
 
@@ -291,54 +290,47 @@ fn compute_exact_ground_state_energy(hamiltonian: &PauliObservable) -> f64 {
 /// using a Hartree-Fock preparation followed by parameterized excitations.
 fn create_chemistry_ansatz() -> ParameterizedCircuit<impl Fn(&[f64]) -> Circuit> {
     ParameterizedCircuit::new(
-        4,  // 4 qubits for H2
-        8,  // 8 parameters
+        4, // 4 qubits for H2
+        8, // 8 parameters
         move |params| {
             let mut circuit = Circuit::new(4);
-            
+
             // Hartree-Fock preparation (|1100⟩ state - two electrons in bonding orbital)
             circuit.x(0);
             circuit.x(1);
-            
+
             // Parameterized single excitations (UCCSD-inspired)
             // Rotation around X for single excitations
             circuit.rx(0, params[0]);
             circuit.rx(1, params[1]);
             circuit.rx(2, params[2]);
             circuit.rx(3, params[3]);
-            
+
             // Entangling layer for correlations
             circuit.cnot(0, 2);
             circuit.cnot(1, 3);
             circuit.cnot(0, 1);
             circuit.cnot(2, 3);
-            
+
             // Final rotations
             circuit.ry(0, params[4]);
             circuit.ry(1, params[5]);
             circuit.ry(2, params[6]);
             circuit.ry(3, params[7]);
-            
+
             circuit
         },
     )
 }
 
 /// Run VQE with Hardware-Efficient Ansatz using Adam optimizer
-fn run_vqe_hardware_efficient_adam(
-    hamiltonian: &PauliObservable,
-    depth: usize,
-) -> VQEResult {
+fn run_vqe_hardware_efficient_adam(hamiltonian: &PauliObservable, depth: usize) -> VQEResult {
     println!("\n{}", "=".repeat(70));
     println!("Hardware-Efficient Ansatz (depth={}) with Adam", depth);
     println!("{}", "=".repeat(70));
 
-    let ansatz = HardwareEfficientAnsatz::new(
-        4,
-        depth,
-        EntanglingGate::CNOT,
-        EntanglingPattern::Linear,
-    );
+    let ansatz =
+        HardwareEfficientAnsatz::new(4, depth, EntanglingGate::CNOT, EntanglingPattern::Linear);
 
     let gradient_method = ParameterShift::new();
     let optimizer = Adam::new(0.01, 200).with_tolerance(1e-6);
@@ -349,20 +341,16 @@ fn run_vqe_hardware_efficient_adam(
 }
 
 /// Run VQE with Hardware-Efficient Ansatz using Gradient Descent optimizer
-fn run_vqe_hardware_efficient_gd(
-    hamiltonian: &PauliObservable,
-    depth: usize,
-) -> VQEResult {
+fn run_vqe_hardware_efficient_gd(hamiltonian: &PauliObservable, depth: usize) -> VQEResult {
     println!("\n{}", "=".repeat(70));
-    println!("Hardware-Efficient Ansatz (depth={}) with Gradient Descent", depth);
+    println!(
+        "Hardware-Efficient Ansatz (depth={}) with Gradient Descent",
+        depth
+    );
     println!("{}", "=".repeat(70));
 
-    let ansatz = HardwareEfficientAnsatz::new(
-        4,
-        depth,
-        EntanglingGate::CNOT,
-        EntanglingPattern::Linear,
-    );
+    let ansatz =
+        HardwareEfficientAnsatz::new(4, depth, EntanglingGate::CNOT, EntanglingPattern::Linear);
 
     let gradient_method = ParameterShift::new();
     let optimizer = GradientDescent::new(0.01, 200).with_tolerance(1e-6);
@@ -423,12 +411,8 @@ fn compare_gradient_methods(hamiltonian: &PauliObservable) {
     println!("Gradient Method Comparison");
     println!("{}", "=".repeat(70));
 
-    let ansatz = HardwareEfficientAnsatz::new(
-        4,
-        2,
-        EntanglingGate::CNOT,
-        EntanglingPattern::Linear,
-    );
+    let ansatz =
+        HardwareEfficientAnsatz::new(4, 2, EntanglingGate::CNOT, EntanglingPattern::Linear);
 
     let parameters: Vec<f64> = (0..ansatz.num_parameters())
         .map(|i| (i as f64) * 0.1)
@@ -437,8 +421,11 @@ fn compare_gradient_methods(hamiltonian: &PauliObservable) {
     let ps_method = ParameterShift::new();
     let fd_method = FiniteDifference::new(1e-7);
 
-    println!("Computing gradients with {} parameters...", parameters.len());
-    
+    println!(
+        "Computing gradients with {} parameters...",
+        parameters.len()
+    );
+
     let ps_gradient = ps_method.compute_gradient(&ansatz, hamiltonian, &parameters);
     let fd_gradient = fd_method.compute_gradient(&ansatz, hamiltonian, &parameters);
 
@@ -460,7 +447,7 @@ fn compare_gradient_methods(hamiltonian: &PauliObservable) {
         .fold(0.0, f64::max);
 
     println!("\nMaximum difference: {:.6}", max_diff);
-    
+
     if max_diff < 1e-4 {
         println!("✓ Gradients match within tolerance!");
     } else {
@@ -474,12 +461,8 @@ fn demonstrate_qng(hamiltonian: &PauliObservable) {
     println!("Quantum Natural Gradient Demonstration");
     println!("{}", "=".repeat(70));
 
-    let ansatz = HardwareEfficientAnsatz::new(
-        4,
-        2,
-        EntanglingGate::CNOT,
-        EntanglingPattern::Linear,
-    );
+    let ansatz =
+        HardwareEfficientAnsatz::new(4, 2, EntanglingGate::CNOT, EntanglingPattern::Linear);
 
     let parameters: Vec<f64> = (0..ansatz.num_parameters())
         .map(|i| (i as f64) * 0.1)
@@ -490,14 +473,19 @@ fn demonstrate_qng(hamiltonian: &PauliObservable) {
 
     println!("Computing standard gradient...");
     let standard_grad = gradient_method.compute_gradient(&ansatz, hamiltonian, &parameters);
-    
-    println!("Computing quantum natural gradient...");
-    let nat_grad = qng.compute_natural_gradient(&ansatz, hamiltonian, &gradient_method, &parameters);
 
-    println!("\nStandard gradient norm: {:.6}", 
-             standard_grad.iter().map(|g| g * g).sum::<f64>().sqrt());
-    println!("Natural gradient norm: {:.6}", 
-             nat_grad.iter().map(|g| g * g).sum::<f64>().sqrt());
+    println!("Computing quantum natural gradient...");
+    let nat_grad =
+        qng.compute_natural_gradient(&ansatz, hamiltonian, &gradient_method, &parameters);
+
+    println!(
+        "\nStandard gradient norm: {:.6}",
+        standard_grad.iter().map(|g| g * g).sum::<f64>().sqrt()
+    );
+    println!(
+        "Natural gradient norm: {:.6}",
+        nat_grad.iter().map(|g| g * g).sum::<f64>().sqrt()
+    );
 
     println!("\nComputing metric tensor...");
     let metric = qng.compute_metric_tensor(&ansatz, &parameters);
@@ -522,13 +510,8 @@ fn test_entangling_patterns(hamiltonian: &PauliObservable) {
 
     for (name, pattern) in patterns {
         println!("\nTesting {} pattern...", name);
-        
-        let ansatz = HardwareEfficientAnsatz::new(
-            4,
-            2,
-            EntanglingGate::CNOT,
-            pattern,
-        );
+
+        let ansatz = HardwareEfficientAnsatz::new(4, 2, EntanglingGate::CNOT, pattern);
 
         let gradient_method = ParameterShift::new();
         let optimizer = Adam::new(0.01, 100).with_tolerance(1e-6);
@@ -556,13 +539,8 @@ fn test_entangling_gates(hamiltonian: &PauliObservable) {
 
     for (name, gate) in gates {
         println!("\nTesting {} gate...", name);
-        
-        let ansatz = HardwareEfficientAnsatz::new(
-            4,
-            2,
-            gate,
-            EntanglingPattern::Linear,
-        );
+
+        let ansatz = HardwareEfficientAnsatz::new(4, 2, gate, EntanglingPattern::Linear);
 
         let gradient_method = ParameterShift::new();
         let optimizer = Adam::new(0.01, 100).with_tolerance(1e-6);
@@ -581,14 +559,16 @@ fn analyze_convergence(result: &VQEResult, name: &str) {
     println!("\n{} Convergence Analysis:", name);
     println!("  Initial energy: {:.6}", result.convergence_history[0]);
     println!("  Final energy: {:.6}", result.ground_state_energy);
-    println!("  Energy reduction: {:.6}", 
-             result.convergence_history[0] - result.ground_state_energy);
+    println!(
+        "  Energy reduction: {:.6}",
+        result.convergence_history[0] - result.ground_state_energy
+    );
     println!("  Iterations: {}", result.num_iterations);
-    
+
     // Check if energy is decreasing
     let mut decreasing = true;
     for i in 1..result.convergence_history.len() {
-        if result.convergence_history[i] > result.convergence_history[i-1] + 1e-6 {
+        if result.convergence_history[i] > result.convergence_history[i - 1] + 1e-6 {
             decreasing = false;
             break;
         }
@@ -606,18 +586,24 @@ fn main() {
 
     // Create H2 Hamiltonian
     let hamiltonian = create_h2_hamiltonian();
-    println!("H2 Hamiltonian created with {} Pauli terms", hamiltonian.terms.len());
-    
+    println!(
+        "H2 Hamiltonian created with {} Pauli terms",
+        hamiltonian.terms.len()
+    );
+
     // Test expectation value at initial state
     let initial_state = State::zero_state(4);
     let initial_energy = hamiltonian.expectation(&initial_state);
     println!("Initial state energy (|0000⟩): {:.6}", initial_energy);
-    
+
     // Compute exact ground state energy by diagonalization
     println!("Computing exact ground state energy by diagonalizing Hamiltonian...");
     let exact_energy = compute_exact_ground_state_energy(&hamiltonian);
-    println!("Exact ground state energy (from this Hamiltonian): {:.6} Ha", exact_energy);
-    
+    println!(
+        "Exact ground state energy (from this Hamiltonian): {:.6} Ha",
+        exact_energy
+    );
+
     // Expected ground state energy for H2 at equilibrium
     // Note: Different STO-3G implementations may give slightly different values
     println!("Target ground state energy (literature, STO-3G): ~ -1.137 Ha (Hartree)");
@@ -627,7 +613,7 @@ fn main() {
     // ============================================================================
     // Run VQE with different ansatzes
     // ============================================================================
-    
+
     let result_he_adam = run_vqe_hardware_efficient_adam(&hamiltonian, 3);
     analyze_convergence(&result_he_adam, "Hardware-Efficient (Adam)");
 
@@ -646,35 +632,44 @@ fn main() {
     // ============================================================================
     // Gradient method comparison
     // ============================================================================
-    
+
     compare_gradient_methods(&hamiltonian);
 
     // ============================================================================
     // Quantum Natural Gradient
     // ============================================================================
-    
+
     demonstrate_qng(&hamiltonian);
 
     // ============================================================================
     // Ansatz architecture comparisons
     // ============================================================================
-    
+
     test_entangling_patterns(&hamiltonian);
     test_entangling_gates(&hamiltonian);
 
     // ============================================================================
     // Final summary
     // ============================================================================
-    
+
     println!("\n{}", "=".repeat(70));
     println!("Summary");
     println!("{}", "=".repeat(70));
     println!("\nBest results:");
-    println!("  Hardware-Efficient (Adam): {:.6} Ha", result_he_adam.ground_state_energy);
+    println!(
+        "  Hardware-Efficient (Adam): {:.6} Ha",
+        result_he_adam.ground_state_energy
+    );
     println!("  Real Amplitudes: {:.6} Ha", result_ra.ground_state_energy);
-    println!("  Efficient SU(2): {:.6} Ha", result_su2.ground_state_energy);
-    println!("  Chemistry-Inspired: {:.6} Ha", result_chem.ground_state_energy);
-    
+    println!(
+        "  Efficient SU(2): {:.6} Ha",
+        result_su2.ground_state_energy
+    );
+    println!(
+        "  Chemistry-Inspired: {:.6} Ha",
+        result_chem.ground_state_energy
+    );
+
     let best_energy = [
         result_he_adam.ground_state_energy,
         result_ra.ground_state_energy,
@@ -683,14 +678,15 @@ fn main() {
     ]
     .iter()
     .fold(f64::INFINITY, |a, &b| a.min(b));
-    
+
     println!("\nBest energy found: {:.6} Ha", best_energy);
     println!("Note: Compare this with the exact ground state energy shown at the start.");
     println!("If VQE energy is close to the exact energy, VQE is working correctly.");
-    println!("If exact energy differs significantly from -1.137 Ha, verify Hamiltonian coefficients.");
-    
+    println!(
+        "If exact energy differs significantly from -1.137 Ha, verify Hamiltonian coefficients."
+    );
+
     println!("\n{}", "=".repeat(70));
     println!("Example completed successfully!");
     println!("{}", "=".repeat(70));
 }
-

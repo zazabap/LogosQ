@@ -50,7 +50,7 @@ mod tests {
         let f = |params: &[f64]| (params[0] - 1.0).powi(2) + (params[1] + 2.0).powi(2);
         let grad_f = |params: &[f64]| vec![2.0 * (params[0] - 1.0), 2.0 * (params[1] + 2.0)];
 
-        let mut optimizer = Adam::new(0.1, 200).with_tolerance(1e-6);        
+        let mut optimizer = Adam::new(0.1, 200).with_tolerance(1e-6);
         let initial = vec![5.0, 5.0];
         let result = optimizer.minimize(f, grad_f, &initial);
 
@@ -83,7 +83,10 @@ mod tests {
         let mut opt = Adam::new(0.1, 200).with_tolerance(1e-6);
         let res = opt.minimize(f, grad, &vec![5.0, 5.0]);
 
-        assert!(res.converged, "Adam should mark converged on 2D shifted quadratic");
+        assert!(
+            res.converged,
+            "Adam should mark converged on 2D shifted quadratic"
+        );
         assert!((res.optimal_parameters[0] - 1.0).abs() < 1e-2);
         assert!((res.optimal_parameters[1] + 2.0).abs() < 1e-2);
         assert!(res.optimal_value < 1e-4);
@@ -98,7 +101,10 @@ mod tests {
         let mut opt = Adam::new(0.2, 100).with_tolerance(1e-6);
         let res = opt.minimize(f, grad, &vec![1e-3, -1e-3]);
 
-        assert!(res.converged, "Adam should set converged when gradient norm is tiny");
+        assert!(
+            res.converged,
+            "Adam should set converged when gradient norm is tiny"
+        );
     }
 
     #[test]
@@ -110,7 +116,10 @@ mod tests {
         let mut opt = Adam::new(0.1, 100).with_tolerance(1e-6);
         let res = opt.minimize(f, grad, &vec![1.0]);
 
-        assert!(res.converged, "Adam should stop when parameter updates are tiny");
+        assert!(
+            res.converged,
+            "Adam should stop when parameter updates are tiny"
+        );
     }
 
     #[test]

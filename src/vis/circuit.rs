@@ -254,7 +254,9 @@ pub fn svg_diagram(circuit: &Circuit) -> String {
                 // Gate label
                 svg.push_str(&format!(
                     r#"<text x="{}" y="{}" class="gate-text">{}</text>"#,
-                    x, y, op.name()
+                    x,
+                    y,
+                    op.name()
                 ));
             }
 
@@ -330,7 +332,9 @@ pub fn svg_diagram(circuit: &Circuit) -> String {
                     ));
                     svg.push_str(&format!(
                         r#"<text x="{}" y="{}" class="gate-text">{}</text>"#,
-                        x, target_y, op.name()
+                        x,
+                        target_y,
+                        op.name()
                     ));
                 }
             }

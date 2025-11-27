@@ -372,7 +372,8 @@ impl State {
     // Helper method to calculate Bloch coordinates
     fn calculate_bloch_coordinates(&self) -> (f64, f64, f64) {
         assert_eq!(
-            self.num_qubits(), 1,
+            self.num_qubits(),
+            1,
             "Bloch coordinates only defined for 1 qubit"
         );
 

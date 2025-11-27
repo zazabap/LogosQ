@@ -174,10 +174,7 @@ impl PauliObservable {
 
     /// Create a simple Z observable on a single qubit
     pub fn single_z(num_qubits: usize, target_qubit: usize) -> Self {
-        assert!(
-            target_qubit < num_qubits,
-            "Qubit index out of bounds"
-        );
+        assert!(target_qubit < num_qubits, "Qubit index out of bounds");
         let mut paulis = vec![Pauli::I; num_qubits];
         paulis[target_qubit] = Pauli::Z;
 

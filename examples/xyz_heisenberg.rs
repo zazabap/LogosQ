@@ -114,15 +114,17 @@ fn main() {
 }
 
 /// Demonstrate a Heisenberg model configuration
-fn demonstrate_heisenberg_model(
-    num_qubits: usize,
-    params: &HeisenbergParameters,
-    name: &str,
-) {
+fn demonstrate_heisenberg_model(num_qubits: usize, params: &HeisenbergParameters, name: &str) {
     println!("Parameters:");
-    println!("  Jx = {:.3}, Jy = {:.3}, Jz = {:.3}", params.jx, params.jy, params.jz);
+    println!(
+        "  Jx = {:.3}, Jy = {:.3}, Jz = {:.3}",
+        params.jx, params.jy, params.jz
+    );
     println!("  External field h = {:.3}", params.external_field);
-    println!("  Time steps = {}, dt = {:.3}", params.time_steps, params.dt);
+    println!(
+        "  Time steps = {}, dt = {:.3}",
+        params.time_steps, params.dt
+    );
     println!("  Total time = {:.3}", params.time_steps as f64 * params.dt);
 
     // Create initial state (all spins up: |1111...⟩)
@@ -135,7 +137,10 @@ fn demonstrate_heisenberg_model(
 
     // Create and visualize the circuit
     let circuit = create_circuit(num_qubits, params);
-    println!("\nCircuit created with {} operations", circuit.num_operations());
+    println!(
+        "\nCircuit created with {} operations",
+        circuit.num_operations()
+    );
 
     // Save circuit visualization
     let filename = format!("xyz_heisenberg_{}.svg", name);
@@ -147,7 +152,9 @@ fn demonstrate_heisenberg_model(
     // Simulate time evolution
     println!("\nSimulating time evolution...");
     let mut evolved_state = state.clone();
-    circuit.execute(&mut evolved_state).expect("Circuit execution failed");
+    circuit
+        .execute(&mut evolved_state)
+        .expect("Circuit execution failed");
 
     // Calculate final energy
     let final_energy = calculate_energy_efficient(&evolved_state, params);
@@ -169,8 +176,14 @@ fn demonstrate_heisenberg_model(
 /// Demonstrate time evolution with intermediate steps
 fn demonstrate_time_evolution(num_qubits: usize, params: &HeisenbergParameters) {
     println!("Parameters:");
-    println!("  Jx = {:.3}, Jy = {:.3}, Jz = {:.3}", params.jx, params.jy, params.jz);
-    println!("  Time steps = {}, dt = {:.3}", params.time_steps, params.dt);
+    println!(
+        "  Jx = {:.3}, Jy = {:.3}, Jz = {:.3}",
+        params.jx, params.jy, params.jz
+    );
+    println!(
+        "  Time steps = {}, dt = {:.3}",
+        params.time_steps, params.dt
+    );
     println!("  Total time = {:.3}", params.time_steps as f64 * params.dt);
 
     // Create initial state (all spins up)
@@ -196,12 +209,12 @@ fn demonstrate_time_evolution(num_qubits: usize, params: &HeisenbergParameters) 
 
     for step in 1..=params.time_steps {
         let step_circuit = create_circuit(num_qubits, &single_step_params);
-        step_circuit.execute(&mut state).expect("Circuit execution failed");
-        
+        step_circuit
+            .execute(&mut state)
+            .expect("Circuit execution failed");
+
         let energy = calculate_energy_efficient(&state, params);
         let time = step as f64 * params.dt;
         println!("  {:.3}    {:.6}", time, energy);
     }
 }
-
-

@@ -44,7 +44,9 @@ mod tests {
         let x = x_gate();
 
         // This should panic because qubit 2 is out of range for a 2-qubit circuit
-        circuit.add_operation(x, vec![2], "X on 2").expect("Invalid qubit index: 2 (must be < 2)");
+        circuit
+            .add_operation(x, vec![2], "X on 2")
+            .expect("Invalid qubit index: 2 (must be < 2)");
     }
 
     #[test]
@@ -306,7 +308,9 @@ mod tests {
         cnot01_full[[6, 4]] = Complex64::new(1.0, 0.0); // |110⟩ → |100⟩
         cnot01_full[[7, 5]] = Complex64::new(1.0, 0.0); // |111⟩ → |101⟩
 
-        circuit.add_matrix_gate(cnot01_full, vec![0, 1, 2], "CNOT_01").unwrap();
+        circuit
+            .add_matrix_gate(cnot01_full, vec![0, 1, 2], "CNOT_01")
+            .unwrap();
 
         // Manually create expanded CNOT(1,2) for a 3-qubit system
         let mut cnot12_full = Array2::zeros((8, 8));
@@ -323,7 +327,9 @@ mod tests {
         cnot12_full[[6, 7]] = Complex64::new(1.0, 0.0); // |110⟩ → |111⟩
         cnot12_full[[7, 6]] = Complex64::new(1.0, 0.0); // |111⟩ → |110⟩
 
-        circuit.add_matrix_gate(cnot12_full, vec![0, 1, 2], "CNOT_12").unwrap();
+        circuit
+            .add_matrix_gate(cnot12_full, vec![0, 1, 2], "CNOT_12")
+            .unwrap();
 
         // Execute on |000⟩ state
         let mut state = State::zero_state(3);

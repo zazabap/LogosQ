@@ -80,14 +80,23 @@ pub use crate::gates::three_qubit::{
 // ============================================================================
 
 pub use crate::gates::parameterized::{
-    // Single-qubit parameterized rotations
-    PhaseGate, RXGate, RYGate, RZGate, U3Gate,
+    CPhaseParamGate,
     // Two-qubit parameterized rotations
-    CRXGate, CRYGate, CRZGate, CPhaseParamGate,
+    CRXGate,
+    CRYGate,
+    CRZGate,
+    // Single-qubit parameterized rotations
+    PhaseGate,
+    RXGate,
     // Two-qubit entangling gates
-    RXXGate, RYYGate, RZZGate,
+    RXXGate,
+    RYGate,
+    RYYGate,
+    RZGate,
+    RZZGate,
     // Enums and helpers
     RotationAxis,
+    U3Gate,
 };
 
 // ============================================================================
@@ -111,17 +120,28 @@ pub use crate::gates::utils::{flip_qubit, is_qubit_set, qubit_bit_position, qubi
 // ============================================================================
 
 pub use crate::optimization::{
-    // Core optimization
-    Ansatz, AnsatzType, HardwareEfficientAnsatz, ParameterizedCircuit,
     // Gradient methods
     gradient::{FiniteDifference, GradientMethod, ParameterShift},
+    // Observables
+    observable::{Observable, PauliObservable, PauliTerm},
     // Optimizers
     optimizer::{Adam, GradientDescent, Optimizer, OptimizerResult},
     qng::QuantumNaturalGradient,
-    // Observables
-    observable::{Observable, PauliObservable, PauliTerm},
     // VQE
-    vqe::{VQE, VQEResult},
+    vqe::{VQEResult, VQE},
+    // Core optimization
+    Ansatz,
+    AnsatzType,
+    HardwareEfficientAnsatz,
+    ParameterizedCircuit,
+};
+
+// ============================================================================
+// SIMULATOR BACKENDS
+// ============================================================================
+
+pub use crate::simulators::mps::{
+    calculate_energy_mps, evolve_heisenberg_mps, MpsConfig, MpsState,
 };
 
 // ============================================================================

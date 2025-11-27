@@ -30,6 +30,7 @@ pub mod gates;
 pub mod noise;
 pub mod optimization;
 pub mod prelude;
+pub mod simulators;
 pub mod states;
 pub mod utils;
 pub mod vis;

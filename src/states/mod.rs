@@ -101,12 +101,7 @@ impl State {
 
         #[cfg(not(feature = "parallel"))]
         {
-            let norm = self
-                .vector
-                .iter()
-                .map(|c| c.norm_sqr())
-                .sum::<f64>()
-                .sqrt();
+            let norm = self.vector.iter().map(|c| c.norm_sqr()).sum::<f64>().sqrt();
 
             if norm > 1e-10 {
                 self.vector.mapv_inplace(|c| c / norm);

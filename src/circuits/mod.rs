@@ -150,7 +150,8 @@ impl Circuit {
             }
         }
 
-        self.operations.push(Operation::new(gate, qubits, name.to_string()));
+        self.operations
+            .push(Operation::new(gate, qubits, name.to_string()));
         Ok(())
     }
 
