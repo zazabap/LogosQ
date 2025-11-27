@@ -23,7 +23,7 @@ mod tests {
         let gradient = gradient_method.compute_gradient(&ansatz, &obs, &params);
 
         assert_eq!(gradient.len(), 2);
-        
+
         // At non-trivial angles, gradient should be non-zero
         let has_nonzero = gradient.iter().any(|&g| g.abs() > 1e-10);
         assert!(
@@ -47,7 +47,7 @@ mod tests {
         let gradient = gradient_method.compute_gradient(&ansatz, &obs, &params);
 
         assert_eq!(gradient.len(), 2);
-        
+
         // Gradient should be near zero at extremum
         for &g in &gradient {
             assert!(
@@ -64,7 +64,7 @@ mod tests {
         // For single RY rotation: |ψ⟩ = RY(θ)|0⟩ = cos(θ/2)|0⟩ + sin(θ/2)|1⟩
         // ⟨Z⟩ = cos²(θ/2) - sin²(θ/2) = cos(θ)
         // d⟨Z⟩/dθ = -sin(θ)
-        
+
         let ansatz =
             HardwareEfficientAnsatz::new(1, 0, EntanglingGate::CNOT, EntanglingPattern::Linear);
 
@@ -78,7 +78,7 @@ mod tests {
 
         // Analytical gradient: -sin(π/4) ≈ -0.7071
         let expected_gradient = -theta.sin();
-        
+
         assert!(
             (gradient[0] - expected_gradient).abs() < 1e-6,
             "Expected gradient ≈ {}, got {}",
@@ -151,7 +151,7 @@ mod tests {
         // Both should give reasonable results
         assert_eq!(grad_large.len(), params.len());
         assert_eq!(grad_small.len(), params.len());
-        
+
         // They should be approximately equal
         for i in 0..params.len() {
             assert!(
@@ -180,7 +180,7 @@ mod tests {
 
         // Both should compute valid gradients
         assert_eq!(grad_default.len(), grad_custom.len());
-        
+
         // They will have different values but should both be reasonable
         for i in 0..params.len() {
             assert!(grad_default[i].is_finite());
@@ -200,7 +200,7 @@ mod tests {
         let gradient = gradient_method.compute_gradient(&ansatz, &obs, &params);
 
         assert_eq!(gradient.len(), 4);
-        
+
         // For ZZ interaction with entangling gates, expect non-zero gradients
         let total_gradient_magnitude: f64 = gradient.iter().map(|g| g.abs()).sum();
         assert!(
@@ -241,12 +241,8 @@ mod tests {
     #[test]
     fn test_gradient_vanishes_for_identity_observable() {
         // If observable is identity, gradient should be zero
-        let ansatz = HardwareEfficientAnsatz::new(
-            2,
-            1,
-            EntanglingGate::CNOT,
-            EntanglingPattern::Linear,
-        );
+        let ansatz =
+            HardwareEfficientAnsatz::new(2, 1, EntanglingGate::CNOT, EntanglingPattern::Linear);
 
         let mut obs = PauliObservable::new(2);
         obs.add_term(PauliTerm::new(1.0, vec![Pauli::I, Pauli::I]));
@@ -269,12 +265,8 @@ mod tests {
     #[test]
     fn test_gradient_symmetry() {
         // For symmetric circuits, certain gradients should be equal
-        let ansatz = HardwareEfficientAnsatz::new(
-            2,
-            1,
-            EntanglingGate::CNOT,
-            EntanglingPattern::Linear,
-        );
+        let ansatz =
+            HardwareEfficientAnsatz::new(2, 1, EntanglingGate::CNOT, EntanglingPattern::Linear);
 
         let obs = {
             let mut obs = PauliObservable::new(2);
@@ -285,7 +277,7 @@ mod tests {
         };
 
         let gradient_method = ParameterShift::new();
-        
+
         // Symmetric parameters
         let theta = 0.5;
         let params = vec![theta, theta, theta, theta];
@@ -295,7 +287,7 @@ mod tests {
         // Due to symmetry, some gradients should be equal
         // This is problem-dependent, but we can check consistency
         assert_eq!(gradient.len(), 4);
-        
+
         // First layer gradients should be equal due to symmetry
         assert!(
             (gradient[0] - gradient[1]).abs() < 1e-6,
@@ -319,7 +311,7 @@ mod tests {
         let gradient = gradient_method.compute_gradient(&ansatz, &hamiltonian, &params);
 
         assert_eq!(gradient.len(), params.len());
-        
+
         // Should have at least some non-zero components
         let has_nonzero = gradient.iter().any(|&g| g.abs() > 1e-10);
         assert!(has_nonzero, "Expected some non-zero gradient components");

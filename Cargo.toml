@@ -19,6 +19,7 @@ plotters = "0.3.7"
 rustfft = "6.4.1" # or latest compatible version
 # Make rayon optional so it can be used in feature flags
 rayon = { version = "1.8.0", optional = true }
+nalgebra = "0.32"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

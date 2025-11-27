@@ -12,7 +12,9 @@ fn test_cnot_gate() {
 
     // Set up a 2-qubit circuit with CNOT
     let mut circuit = logosq::circuits::Circuit::new(2);
-    circuit.add_matrix_gate(cnot.matrix.clone(), vec![0, 1], "CNOT").unwrap();
+    circuit
+        .add_matrix_gate(cnot.matrix.clone(), vec![0, 1], "CNOT")
+        .unwrap();
 
     // Test |00⟩ → |00⟩ (no flip when control is 0)
     let mut state = State::zero_state(2);
@@ -59,7 +61,9 @@ fn test_swap_gate() {
 
     // Set up a 2-qubit circuit with SWAP
     let mut circuit = logosq::circuits::Circuit::new(2);
-    circuit.add_matrix_gate(swap.matrix.clone(), vec![0, 1], "SWAP").unwrap();
+    circuit
+        .add_matrix_gate(swap.matrix.clone(), vec![0, 1], "SWAP")
+        .unwrap();
 
     // Test |01⟩ → |10⟩ (swap states)
     let mut state = State::zero_state(2);
@@ -90,7 +94,9 @@ fn test_cz_gate() {
 
     // Set up a 2-qubit circuit with CZ
     let mut circuit = logosq::circuits::Circuit::new(2);
-    circuit.add_matrix_gate(cz.matrix.clone(), vec![0, 1], "CZ").unwrap();
+    circuit
+        .add_matrix_gate(cz.matrix.clone(), vec![0, 1], "CZ")
+        .unwrap();
 
     // Test |11⟩ → -|11⟩ (phase flip when both qubits are 1)
     let mut state = State::zero_state(2);
@@ -123,7 +129,9 @@ fn test_toffoli_gate() {
 
     // Set up a 3-qubit circuit with Toffoli
     let mut circuit = logosq::circuits::Circuit::new(3);
-    circuit.add_matrix_gate(toffoli.matrix.clone(), vec![0, 1, 2], "Toffoli").unwrap();
+    circuit
+        .add_matrix_gate(toffoli.matrix.clone(), vec![0, 1, 2], "Toffoli")
+        .unwrap();
 
     // Test |110⟩ → |111⟩ (flip target when both controls are 1)
     let mut state = State::zero_state(3);

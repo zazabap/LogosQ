@@ -22,7 +22,9 @@ fn main() {
 
     // Add CNOT between qubits 0 and 1
     let cnot = cnot_gate();
-    circuit.add_matrix_gate(cnot.matrix.clone(), vec![0, 1], "CNOT").unwrap();
+    circuit
+        .add_matrix_gate(cnot.matrix.clone(), vec![0, 1], "CNOT")
+        .unwrap();
 
     // Execute circuit on |00⟩ state
     let mut state = State::zero_state(2);

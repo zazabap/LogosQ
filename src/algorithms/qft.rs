@@ -101,6 +101,5 @@ pub fn controlled_phase(circuit: &mut Circuit, control: usize, target: usize, an
         num_qubits: circuit.num_qubits(),
     };
 
-    circuit
-        .add_operation_unchecked(gate, vec![control, target], &format!("CP({:.4})", angle));
+    circuit.add_operation_unchecked(gate, vec![control, target], &format!("CP({:.4})", angle));
 }

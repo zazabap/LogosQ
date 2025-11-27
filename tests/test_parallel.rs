@@ -41,9 +41,17 @@ mod tests {
 
         // Test with an already normalized state
         let mut state_norm = State::zero_state(2);
-        let norm_before = state_norm.vector().iter().map(|c| c.norm_sqr()).sum::<f64>();
+        let norm_before = state_norm
+            .vector()
+            .iter()
+            .map(|c| c.norm_sqr())
+            .sum::<f64>();
         state_norm.normalize(); // Call normalize again
-        let norm_after = state_norm.vector().iter().map(|c| c.norm_sqr()).sum::<f64>();
+        let norm_after = state_norm
+            .vector()
+            .iter()
+            .map(|c| c.norm_sqr())
+            .sum::<f64>();
 
         assert!(
             (norm_before - norm_after).abs() < 1e-10,
