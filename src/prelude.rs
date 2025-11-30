@@ -15,7 +15,7 @@ pub use crate::states;
 pub use crate::circuits::Circuit;
 pub use crate::error::{LogosQError, Result};
 pub use crate::gates::{Gate, MatrixGate};
-pub use crate::states::State;
+pub use crate::states::{QuantumStateBackend, State};
 
 // ============================================================================
 // MATRIX-BASED GATES (for reference/testing/small systems)

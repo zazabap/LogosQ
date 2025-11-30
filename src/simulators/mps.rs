@@ -1,5 +1,6 @@
 use crate::algorithms::xyz_heisenberg::HeisenbergParameters;
-use crate::states::State;
+use crate::error::Result;
+use crate::states::{QuantumStateBackend, State};
 use nalgebra::{DMatrix, SVD};
 use ndarray::{Array1, Array2, Array3};
 use num_complex::Complex64;
@@ -730,4 +731,205 @@ fn propagate_right_env(
     }
 
     new_env
+}
+
+impl QuantumStateBackend for MpsState {
+    fn num_qubits(&self) -> usize {
+        self.num_qubits()
+    }
+
+    fn apply_single_qubit_matrix(&mut self, qubit: usize, matrix: &Array2<Complex64>) -> Result<()> {
+        if qubit >= self.num_qubits() {
+            return Err(crate::error::LogosQError::InvalidQubitIndex {
+                index: qubit,
+                num_qubits: self.num_qubits(),
+            });
+        }
+        self.apply_single_qubit(qubit, matrix);
+        Ok(())
+    }
+
+    fn apply_two_qubit_matrix(
+        &mut self,
+        control: usize,
+        target: usize,
+        matrix: &Array2<Complex64>,
+    ) -> Result<()> {
+        if control >= self.num_qubits() || target >= self.num_qubits() {
+            return Err(crate::error::LogosQError::InvalidQubitIndex {
+                index: control.max(target),
+                num_qubits: self.num_qubits(),
+            });
+        }
+
+        // MPS works best with nearest-neighbor gates
+        // For non-adjacent qubits, we need to use SWAP networks
+        if control.abs_diff(target) == 1 {
+            // Adjacent qubits - direct application
+            let min_qubit = control.min(target);
+            self.apply_two_qubit(min_qubit, matrix);
+        } else {
+            // Non-adjacent - use controlled phase with SWAP network
+            // For now, convert to controlled phase if it's a CP gate, otherwise use SWAP
+            if is_controlled_phase(matrix) {
+                let angle = extract_phase_angle(matrix);
+                self.apply_controlled_phase(control, target, angle);
+            } else {
+                // Use SWAP network to bring qubits together
+                let mut swaps = Vec::new();
+                let mut current = target;
+                while current > control + 1 {
+                    let swap_site = current - 1;
+                    self.apply_swap_gate(swap_site);
+                    swaps.push(swap_site);
+                    current -= 1;
+                }
+
+                // Apply gate on adjacent qubits
+                self.apply_two_qubit(control, matrix);
+
+                // Reverse SWAPs
+                for site in swaps.into_iter().rev() {
+                    self.apply_swap_gate(site);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn apply_three_qubit_matrix(
+        &mut self,
+        _q1: usize,
+        _q2: usize,
+        _q3: usize,
+        _matrix: &Array2<Complex64>,
+    ) -> Result<()> {
+        // Three-qubit gates are not directly supported in MPS
+        // Would need to convert to dense state, apply, then convert back
+        // For now, return an error suggesting conversion
+        Err(crate::error::LogosQError::OptimizationError {
+            message: "Three-qubit gates not directly supported in MPS backend. Convert to dense state first.".to_string(),
+        })
+    }
+
+    fn apply_full_matrix(&mut self, matrix: &Array2<Complex64>) -> Result<()> {
+        // Convert to dense state, apply, then reconstruct MPS
+        let mut dense = self.to_dense_state();
+        let new_vector = matrix.dot(dense.vector());
+        *dense.vector_mut() = new_vector;
+        dense.normalize();
+
+        // Reconstruct MPS from dense state
+        // For product states, we can reconstruct directly
+        // For entangled states, we use a simplified approach that works for many cases
+        let num_qubits = self.num_qubits();
+        let config = MpsConfig {
+            max_bond_dim: self.max_bond_dim,
+            truncation_threshold: self.truncation_threshold,
+        };
+
+        let vector = dense.vector();
+        
+        // Check if the state is a product state (all zeros except one element)
+        let mut non_zero_count = 0;
+        let mut non_zero_idx = 0;
+        for (i, &amp) in vector.iter().enumerate() {
+            if amp.norm() > 1e-10 {
+                non_zero_count += 1;
+                non_zero_idx = i;
+            }
+        }
+
+        if non_zero_count == 1 {
+            // Product state - can create directly
+            *self = MpsState::zero_state(num_qubits, config);
+            // Apply X gates to set the correct bits
+            for qubit in 0..num_qubits {
+                let bit = (non_zero_idx >> (num_qubits - 1 - qubit)) & 1;
+                if bit == 1 {
+                    self.apply_pauli_x(qubit);
+                }
+            }
+        } else {
+            // For non-product states, try to reconstruct by applying gates
+            // This is a simplified approach - start from zero and apply gates to match amplitudes
+            // For proper implementation, would need full SVD-based MPS reconstruction
+            // For now, we use a heuristic: if state is close to a product state, reconstruct it
+            // Otherwise, return an error for truly entangled states
+            
+            // Check if it's a separable product state (can be written as |ψ₁⟩ ⊗ |ψ₂⟩ ⊗ ...)
+            // For 2 qubits, check if it's separable
+            if num_qubits == 2 {
+                // For 2-qubit states, try to reconstruct by applying single-qubit gates
+                // This works for product states but not for entangled states
+                *self = MpsState::zero_state(num_qubits, config);
+                
+                // Try to apply gates to match the state
+                // This is a simplified reconstruction - works for product states
+                // For entangled states, we'd need proper SVD
+                let v00 = vector[0];
+                let v01 = vector[1];
+                let v10 = vector[2];
+                let v11 = vector[3];
+                
+                // If state is separable, we can reconstruct it
+                // Check if |v00*v11 - v01*v10| is small (separable condition)
+                let det = v00 * v11 - v01 * v10;
+                if det.norm() < 1e-8 {
+                    // Approximately separable - can reconstruct
+                    // For now, use a simple approximation
+                    // In practice, this should use proper SVD
+                    return Err(crate::error::LogosQError::OptimizationError {
+                        message: "Full matrix gates on entangled MPS states require proper SVD reconstruction. Use dense state or decompose gates.".to_string(),
+                    });
+                } else {
+                    // Entangled state
+                    return Err(crate::error::LogosQError::OptimizationError {
+                        message: "Full matrix gates on entangled MPS states require proper SVD reconstruction. Use dense state or decompose gates.".to_string(),
+                    });
+                }
+            } else {
+                // For more qubits, reconstruction is more complex
+                return Err(crate::error::LogosQError::OptimizationError {
+                    message: "Full matrix gates on entangled MPS states require proper SVD reconstruction. Use dense state or decompose gates.".to_string(),
+                });
+            }
+        }
+
+        Ok(())
+    }
+}
+
+// Helper to check if a matrix is a controlled phase gate
+fn is_controlled_phase(matrix: &Array2<Complex64>) -> bool {
+    // Check if matrix has the form:
+    // [[1, 0, 0, 0],
+    //  [0, 1, 0, 0],
+    //  [0, 0, 1, 0],
+    //  [0, 0, 0, exp(i*phi)]]
+    if matrix.shape() != [4, 4] {
+        return false;
+    }
+    let tol = 1e-10;
+    (matrix[[0, 0]] - Complex64::new(1.0, 0.0)).norm() < tol
+        && (matrix[[1, 1]] - Complex64::new(1.0, 0.0)).norm() < tol
+        && (matrix[[2, 2]] - Complex64::new(1.0, 0.0)).norm() < tol
+        && matrix[[0, 1]].norm() < tol
+        && matrix[[0, 2]].norm() < tol
+        && matrix[[0, 3]].norm() < tol
+        && matrix[[1, 0]].norm() < tol
+        && matrix[[1, 2]].norm() < tol
+        && matrix[[1, 3]].norm() < tol
+        && matrix[[2, 0]].norm() < tol
+        && matrix[[2, 1]].norm() < tol
+        && matrix[[2, 3]].norm() < tol
+        && matrix[[3, 0]].norm() < tol
+        && matrix[[3, 1]].norm() < tol
+        && matrix[[3, 2]].norm() < tol
+        && matrix[[3, 3]].norm() - 1.0 < tol
+}
+
+// Helper to extract phase angle from controlled phase gate
+fn extract_phase_angle(matrix: &Array2<Complex64>) -> f64 {
+    matrix[[3, 3]].arg()
 }
