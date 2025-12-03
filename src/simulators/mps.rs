@@ -738,7 +738,11 @@ impl QuantumStateBackend for MpsState {
         self.num_qubits()
     }
 
-    fn apply_single_qubit_matrix(&mut self, qubit: usize, matrix: &Array2<Complex64>) -> Result<()> {
+    fn apply_single_qubit_matrix(
+        &mut self,
+        qubit: usize,
+        matrix: &Array2<Complex64>,
+    ) -> Result<()> {
         if qubit >= self.num_qubits() {
             return Err(crate::error::LogosQError::InvalidQubitIndex {
                 index: qubit,
@@ -751,8 +755,8 @@ impl QuantumStateBackend for MpsState {
 
     fn apply_two_qubit_matrix(
         &mut self,
-        control: usize,
-        target: usize,
+        mut control: usize,
+        mut target: usize,
         matrix: &Array2<Complex64>,
     ) -> Result<()> {
         if control >= self.num_qubits() || target >= self.num_qubits() {
@@ -762,17 +766,39 @@ impl QuantumStateBackend for MpsState {
             });
         }
 
+        // Normalize to control < target (swap if needed and permute matrix accordingly)
+        let mut gate_matrix = matrix.clone();
+        if control > target {
+            std::mem::swap(&mut control, &mut target);
+            // Permute matrix to swap the qubit order: (original_control, original_target) -> (target, control)
+            // Original matrix indices: 0=|00⟩, 1=|01⟩, 2=|10⟩, 3=|11⟩ (original_control, original_target)
+            // After swap, we need: 0=|00⟩, 1=|10⟩, 2=|01⟩, 3=|11⟩ (target, control)
+            // The mapping is: index i -> index j where:
+            //   i = (original_control_bit << 1) | original_target_bit
+            //   j = (original_target_bit << 1) | original_control_bit
+            // So: 0->0, 1->2, 2->1, 3->3
+            // We need to reorder both rows and columns according to this permutation
+            let mut reordered = Array2::zeros((4, 4));
+            // Permutation: [0, 2, 1, 3] - maps old index to new index
+            let perm = [0, 2, 1, 3];
+            for i in 0..4 {
+                for j in 0..4 {
+                    reordered[[perm[i], perm[j]]] = gate_matrix[[i, j]];
+                }
+            }
+            gate_matrix = reordered;
+        }
+
         // MPS works best with nearest-neighbor gates
         // For non-adjacent qubits, we need to use SWAP networks
         if control.abs_diff(target) == 1 {
             // Adjacent qubits - direct application
-            let min_qubit = control.min(target);
-            self.apply_two_qubit(min_qubit, matrix);
+            self.apply_two_qubit(control, &gate_matrix);
         } else {
             // Non-adjacent - use controlled phase with SWAP network
             // For now, convert to controlled phase if it's a CP gate, otherwise use SWAP
-            if is_controlled_phase(matrix) {
-                let angle = extract_phase_angle(matrix);
+            if is_controlled_phase(&gate_matrix) {
+                let angle = extract_phase_angle(&gate_matrix);
                 self.apply_controlled_phase(control, target, angle);
             } else {
                 // Use SWAP network to bring qubits together
@@ -786,7 +812,7 @@ impl QuantumStateBackend for MpsState {
                 }
 
                 // Apply gate on adjacent qubits
-                self.apply_two_qubit(control, matrix);
+                self.apply_two_qubit(control, &gate_matrix);
 
                 // Reverse SWAPs
                 for site in swaps.into_iter().rev() {
@@ -829,7 +855,7 @@ impl QuantumStateBackend for MpsState {
         };
 
         let vector = dense.vector();
-        
+
         // Check if the state is a product state (all zeros except one element)
         let mut non_zero_count = 0;
         let mut non_zero_idx = 0;
@@ -856,14 +882,14 @@ impl QuantumStateBackend for MpsState {
             // For proper implementation, would need full SVD-based MPS reconstruction
             // For now, we use a heuristic: if state is close to a product state, reconstruct it
             // Otherwise, return an error for truly entangled states
-            
+
             // Check if it's a separable product state (can be written as |ψ₁⟩ ⊗ |ψ₂⟩ ⊗ ...)
             // For 2 qubits, check if it's separable
             if num_qubits == 2 {
                 // For 2-qubit states, try to reconstruct by applying single-qubit gates
                 // This works for product states but not for entangled states
                 *self = MpsState::zero_state(num_qubits, config);
-                
+
                 // Try to apply gates to match the state
                 // This is a simplified reconstruction - works for product states
                 // For entangled states, we'd need proper SVD
@@ -871,7 +897,7 @@ impl QuantumStateBackend for MpsState {
                 let v01 = vector[1];
                 let v10 = vector[2];
                 let v11 = vector[3];
-                
+
                 // If state is separable, we can reconstruct it
                 // Check if |v00*v11 - v01*v10| is small (separable condition)
                 let det = v00 * v11 - v01 * v10;
@@ -926,7 +952,7 @@ fn is_controlled_phase(matrix: &Array2<Complex64>) -> bool {
         && matrix[[3, 0]].norm() < tol
         && matrix[[3, 1]].norm() < tol
         && matrix[[3, 2]].norm() < tol
-        && matrix[[3, 3]].norm() - 1.0 < tol
+        && (matrix[[3, 3]].norm() - 1.0).abs() < tol
 }
 
 // Helper to extract phase angle from controlled phase gate

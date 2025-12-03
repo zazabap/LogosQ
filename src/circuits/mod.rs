@@ -451,7 +451,7 @@ impl Circuit {
 
         for operation in &self.operations {
             let qubits = operation.qubits();
-            
+
             // Extract full system matrix first to get correct behavior
             let dim = 1 << self.num_qubits;
             let mut full_matrix = Array2::zeros((dim, dim));
@@ -459,18 +459,19 @@ impl Circuit {
                 let mut test_state = State::zero_state(self.num_qubits);
                 *test_state.vector_mut() = Array1::zeros(dim);
                 test_state.vector_mut()[col] = Complex64::new(1.0, 0.0);
-                
+
                 operation.gate.apply(&mut test_state);
                 for row in 0..dim {
                     full_matrix[[row, col]] = test_state.vector()[row];
                 }
             }
-            
+
             match qubits.len() {
                 1 => {
                     // Single-qubit gate: extract 2x2 submatrix from full matrix
                     let qubit = qubits[0];
-                    let gate_matrix = extract_single_qubit_matrix(&full_matrix, qubit, self.num_qubits);
+                    let gate_matrix =
+                        extract_single_qubit_matrix(&full_matrix, qubit, self.num_qubits);
                     // Use optimized single-qubit method
                     backend.apply_single_qubit_matrix(qubit, &gate_matrix)?;
                 }
@@ -478,13 +479,19 @@ impl Circuit {
                     // Two-qubit gate: extract 4x4 submatrix from full matrix
                     let control = qubits[0];
                     let target = qubits[1];
-                    let gate_matrix = extract_two_qubit_matrix(&full_matrix, control, target, self.num_qubits);
+                    let gate_matrix =
+                        extract_two_qubit_matrix(&full_matrix, control, target, self.num_qubits);
                     // Use optimized two-qubit method
                     backend.apply_two_qubit_matrix(control, target, &gate_matrix)?;
                 }
                 3 => {
                     // Three-qubit gate: use full matrix
-                    backend.apply_three_qubit_matrix(qubits[0], qubits[1], qubits[2], &full_matrix)?;
+                    backend.apply_three_qubit_matrix(
+                        qubits[0],
+                        qubits[1],
+                        qubits[2],
+                        &full_matrix,
+                    )?;
                 }
                 _ => {
                     // Full system gate: use full matrix
@@ -504,7 +511,7 @@ fn extract_single_qubit_matrix(
     num_qubits: usize,
 ) -> Array2<Complex64> {
     let mut gate_matrix = Array2::zeros((2, 2));
-    
+
     // Extract the 2x2 submatrix by looking at the subspace where this qubit acts
     // We need to find the matrix elements where all other qubits are in the same state
     for gate_row in 0..2 {
@@ -514,7 +521,7 @@ fn extract_single_qubit_matrix(
             // - All other qubits are in state 0
             let mut row_idx = 0;
             let mut col_idx = 0;
-            
+
             for q in 0..num_qubits {
                 let bit_pos = num_qubits - 1 - q;
                 if q == qubit {
@@ -528,11 +535,11 @@ fn extract_single_qubit_matrix(
                 }
                 // Other qubits stay at 0
             }
-            
+
             gate_matrix[[gate_row, gate_col]] = full_matrix[[row_idx, col_idx]];
         }
     }
-    
+
     gate_matrix
 }
 
@@ -544,7 +551,7 @@ fn extract_two_qubit_matrix(
     num_qubits: usize,
 ) -> Array2<Complex64> {
     let mut gate_matrix = Array2::zeros((4, 4));
-    
+
     // Extract the 4x4 submatrix by looking at the subspace where these qubits act
     // Gate indices: 0=|00⟩, 1=|01⟩, 2=|10⟩, 3=|11⟩ (control, target)
     for gate_row in 0..4 {
@@ -553,13 +560,13 @@ fn extract_two_qubit_matrix(
             let target_row = gate_row & 1;
             let control_col = (gate_col >> 1) & 1;
             let target_col = gate_col & 1;
-            
+
             // Find the full system indices where:
             // - Control and target qubits are in the specified states
             // - All other qubits are in state 0
             let mut row_idx = 0;
             let mut col_idx = 0;
-            
+
             for q in 0..num_qubits {
                 let bit_pos = num_qubits - 1 - q;
                 if q == control {
@@ -579,11 +586,11 @@ fn extract_two_qubit_matrix(
                 }
                 // Other qubits stay at 0
             }
-            
+
             gate_matrix[[gate_row, gate_col]] = full_matrix[[row_idx, col_idx]];
         }
     }
-    
+
     gate_matrix
 }
 

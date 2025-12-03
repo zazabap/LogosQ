@@ -20,7 +20,8 @@ pub trait QuantumStateBackend: Send + Sync {
     /// # Arguments
     /// * `qubit` - The qubit index (0-indexed)
     /// * `matrix` - The 2x2 unitary gate matrix
-    fn apply_single_qubit_matrix(&mut self, qubit: usize, matrix: &Array2<Complex64>) -> Result<()>;
+    fn apply_single_qubit_matrix(&mut self, qubit: usize, matrix: &Array2<Complex64>)
+        -> Result<()>;
 
     /// Applies a two-qubit gate matrix to the specified qubits.
     ///
@@ -57,4 +58,3 @@ pub trait QuantumStateBackend: Send + Sync {
     /// * `matrix` - The full unitary gate matrix (2^n x 2^n for n qubits)
     fn apply_full_matrix(&mut self, matrix: &Array2<Complex64>) -> Result<()>;
 }
-

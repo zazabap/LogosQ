@@ -396,7 +396,11 @@ impl QuantumStateBackend for State {
         self.num_qubits
     }
 
-    fn apply_single_qubit_matrix(&mut self, qubit: usize, matrix: &Array2<Complex64>) -> Result<()> {
+    fn apply_single_qubit_matrix(
+        &mut self,
+        qubit: usize,
+        matrix: &Array2<Complex64>,
+    ) -> Result<()> {
         if qubit >= self.num_qubits {
             return Err(LogosQError::InvalidQubitIndex {
                 index: qubit,
@@ -543,4 +547,3 @@ fn expand_two_qubit_gate(
 
     Ok(full_matrix)
 }
-
