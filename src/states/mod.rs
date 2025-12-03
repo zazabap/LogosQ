@@ -3,13 +3,17 @@
 //! This module provides the `State` struct for representing quantum state vectors
 //! and operations for manipulating and measuring quantum states.
 
+mod backend;
+
 use crate::error::{LogosQError, Result};
 use crate::gates::Gate;
-use ndarray::Array1;
+use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::thread_rng;
 use std::f64::consts::SQRT_2;
+
+pub use backend::QuantumStateBackend;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -385,4 +389,161 @@ impl State {
             .map(|(a, b)| a.conj() * b)
             .sum())
     }
+}
+
+impl QuantumStateBackend for State {
+    fn num_qubits(&self) -> usize {
+        self.num_qubits
+    }
+
+    fn apply_single_qubit_matrix(
+        &mut self,
+        qubit: usize,
+        matrix: &Array2<Complex64>,
+    ) -> Result<()> {
+        if qubit >= self.num_qubits {
+            return Err(LogosQError::InvalidQubitIndex {
+                index: qubit,
+                num_qubits: self.num_qubits,
+            });
+        }
+
+        // Expand single-qubit gate to full system dimension
+        let identity = Array2::from_shape_vec(
+            (2, 2),
+            vec![
+                Complex64::new(1.0, 0.0),
+                Complex64::new(0.0, 0.0),
+                Complex64::new(0.0, 0.0),
+                Complex64::new(1.0, 0.0),
+            ],
+        )
+        .unwrap();
+
+        let mut full_matrix = if qubit == 0 {
+            matrix.clone()
+        } else {
+            identity.clone()
+        };
+
+        // Tensor product with identity or gate for each remaining qubit
+        for i in 1..self.num_qubits {
+            if i == qubit {
+                full_matrix = tensor_product_2d(&full_matrix, matrix);
+            } else {
+                full_matrix = tensor_product_2d(&full_matrix, &identity);
+            }
+        }
+
+        self.apply_full_matrix(&full_matrix)
+    }
+
+    fn apply_two_qubit_matrix(
+        &mut self,
+        control: usize,
+        target: usize,
+        matrix: &Array2<Complex64>,
+    ) -> Result<()> {
+        if control >= self.num_qubits || target >= self.num_qubits {
+            return Err(LogosQError::InvalidQubitIndex {
+                index: control.max(target),
+                num_qubits: self.num_qubits,
+            });
+        }
+
+        // Expand two-qubit gate to full system dimension
+        let full_matrix = expand_two_qubit_gate(matrix, control, target, self.num_qubits)?;
+        self.apply_full_matrix(&full_matrix)
+    }
+
+    fn apply_three_qubit_matrix(
+        &mut self,
+        _q1: usize,
+        _q2: usize,
+        _q3: usize,
+        matrix: &Array2<Complex64>,
+    ) -> Result<()> {
+        // For three-qubit gates, use full matrix expansion
+        // This is a simplified implementation - could be optimized
+        self.apply_full_matrix(matrix)
+    }
+
+    fn apply_full_matrix(&mut self, matrix: &Array2<Complex64>) -> Result<()> {
+        let state_vec = self.vector();
+        let state_dim = state_vec.len();
+
+        if matrix.shape()[1] != state_dim {
+            return Err(LogosQError::DimensionMismatch {
+                expected: state_dim,
+                actual: matrix.shape()[1],
+            });
+        }
+
+        let new_vector = matrix.dot(state_vec);
+        *self.vector_mut() = new_vector;
+        self.normalize();
+        Ok(())
+    }
+}
+
+// Helper function for tensor product of 2D matrices
+fn tensor_product_2d(a: &Array2<Complex64>, b: &Array2<Complex64>) -> Array2<Complex64> {
+    let (rows_a, cols_a) = a.dim();
+    let (rows_b, cols_b) = b.dim();
+    let mut result = Array2::zeros((rows_a * rows_b, cols_a * cols_b));
+
+    for i in 0..rows_a {
+        for j in 0..cols_a {
+            for k in 0..rows_b {
+                for l in 0..cols_b {
+                    result[[i * rows_b + k, j * cols_b + l]] = a[[i, j]] * b[[k, l]];
+                }
+            }
+        }
+    }
+
+    result
+}
+
+// Helper to expand two-qubit gate to full system
+fn expand_two_qubit_gate(
+    gate: &Array2<Complex64>,
+    control: usize,
+    target: usize,
+    num_qubits: usize,
+) -> Result<Array2<Complex64>> {
+    let dim = 1 << num_qubits;
+    let mut full_matrix = Array2::zeros((dim, dim));
+
+    // Build the full matrix by placing the gate at the correct positions
+    for i in 0..dim {
+        for j in 0..dim {
+            // Extract the bits for control and target qubits
+            let control_bit = (i >> (num_qubits - 1 - control)) & 1;
+            let target_bit = (i >> (num_qubits - 1 - target)) & 1;
+            let control_bit_j = (j >> (num_qubits - 1 - control)) & 1;
+            let target_bit_j = (j >> (num_qubits - 1 - target)) & 1;
+
+            // Check if this is in the subspace where the gate acts
+            let gate_row = (control_bit << 1) | target_bit;
+            let gate_col = (control_bit_j << 1) | target_bit_j;
+
+            // Check if other qubits match
+            let other_qubits_match = (0..num_qubits)
+                .filter(|&q| q != control && q != target)
+                .all(|q| {
+                    let bit_i = (i >> (num_qubits - 1 - q)) & 1;
+                    let bit_j = (j >> (num_qubits - 1 - q)) & 1;
+                    bit_i == bit_j
+                });
+
+            if other_qubits_match {
+                full_matrix[[i, j]] = gate[[gate_row, gate_col]];
+            } else {
+                full_matrix[[i, j]] = Complex64::new(0.0, 0.0);
+            }
+        }
+    }
+
+    Ok(full_matrix)
 }

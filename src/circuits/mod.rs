@@ -6,8 +6,8 @@
 use crate::error::{LogosQError, Result};
 use crate::gates::{Gate, MatrixGate};
 use crate::noise::NoiseModel;
-use crate::states::State;
-use ndarray::Array2;
+use crate::states::{QuantumStateBackend, State};
+use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 use std::fmt;
 use std::sync::Arc;
@@ -411,6 +411,187 @@ impl Circuit {
 
         Ok(results)
     }
+
+    /// Executes the circuit on a quantum state backend (supports both State and MpsState).
+    ///
+    /// This method allows circuits to execute on different backends by converting
+    /// gates to their matrix representation and applying them via the backend trait.
+    ///
+    /// # Arguments
+    /// * `backend` - The quantum state backend (State, MpsState, etc.)
+    ///
+    /// # Errors
+    /// Returns an error if the backend has a different number of qubits than the circuit,
+    /// or if a gate cannot be converted to matrix form.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use logosq::prelude::*;
+    ///
+    /// let mut circuit = Circuit::new(2);
+    /// circuit.h(0).cnot(0, 1);
+    ///
+    /// // Execute on dense state
+    /// let mut state = State::zero_state(2);
+    /// circuit.execute_on_backend(&mut state).unwrap();
+    ///
+    /// // Execute on MPS state
+    /// let config = MpsConfig::default();
+    /// let mut mps_state = MpsState::zero_state(2, config);
+    /// circuit.execute_on_backend(&mut mps_state).unwrap();
+    /// ```
+    pub fn execute_on_backend<B: QuantumStateBackend>(&self, backend: &mut B) -> Result<()> {
+        if backend.num_qubits() != self.num_qubits {
+            return Err(LogosQError::CircuitQubitMismatch {
+                circuit_qubits: self.num_qubits,
+                state_qubits: backend.num_qubits(),
+            });
+        }
+
+        for operation in &self.operations {
+            let qubits = operation.qubits();
+
+            // Extract full system matrix first to get correct behavior
+            let dim = 1 << self.num_qubits;
+            let mut full_matrix = Array2::zeros((dim, dim));
+            for col in 0..dim {
+                let mut test_state = State::zero_state(self.num_qubits);
+                *test_state.vector_mut() = Array1::zeros(dim);
+                test_state.vector_mut()[col] = Complex64::new(1.0, 0.0);
+
+                operation.gate.apply(&mut test_state);
+                for row in 0..dim {
+                    full_matrix[[row, col]] = test_state.vector()[row];
+                }
+            }
+
+            match qubits.len() {
+                1 => {
+                    // Single-qubit gate: extract 2x2 submatrix from full matrix
+                    let qubit = qubits[0];
+                    let gate_matrix =
+                        extract_single_qubit_matrix(&full_matrix, qubit, self.num_qubits);
+                    // Use optimized single-qubit method
+                    backend.apply_single_qubit_matrix(qubit, &gate_matrix)?;
+                }
+                2 => {
+                    // Two-qubit gate: extract 4x4 submatrix from full matrix
+                    let control = qubits[0];
+                    let target = qubits[1];
+                    let gate_matrix =
+                        extract_two_qubit_matrix(&full_matrix, control, target, self.num_qubits);
+                    // Use optimized two-qubit method
+                    backend.apply_two_qubit_matrix(control, target, &gate_matrix)?;
+                }
+                3 => {
+                    // Three-qubit gate: use full matrix
+                    backend.apply_three_qubit_matrix(
+                        qubits[0],
+                        qubits[1],
+                        qubits[2],
+                        &full_matrix,
+                    )?;
+                }
+                _ => {
+                    // Full system gate: use full matrix
+                    backend.apply_full_matrix(&full_matrix)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+// Helper to extract 2x2 single-qubit gate matrix from full system matrix
+fn extract_single_qubit_matrix(
+    full_matrix: &Array2<Complex64>,
+    qubit: usize,
+    num_qubits: usize,
+) -> Array2<Complex64> {
+    let mut gate_matrix = Array2::zeros((2, 2));
+
+    // Extract the 2x2 submatrix by looking at the subspace where this qubit acts
+    // We need to find the matrix elements where all other qubits are in the same state
+    for gate_row in 0..2 {
+        for gate_col in 0..2 {
+            // Find the full system indices where:
+            // - The target qubit is in state gate_row (for row) or gate_col (for col)
+            // - All other qubits are in state 0
+            let mut row_idx = 0;
+            let mut col_idx = 0;
+
+            for q in 0..num_qubits {
+                let bit_pos = num_qubits - 1 - q;
+                if q == qubit {
+                    // Set the target qubit bit
+                    if (gate_row & 1) != 0 {
+                        row_idx |= 1 << bit_pos;
+                    }
+                    if (gate_col & 1) != 0 {
+                        col_idx |= 1 << bit_pos;
+                    }
+                }
+                // Other qubits stay at 0
+            }
+
+            gate_matrix[[gate_row, gate_col]] = full_matrix[[row_idx, col_idx]];
+        }
+    }
+
+    gate_matrix
+}
+
+// Helper to extract 4x4 two-qubit gate matrix from full system matrix
+fn extract_two_qubit_matrix(
+    full_matrix: &Array2<Complex64>,
+    control: usize,
+    target: usize,
+    num_qubits: usize,
+) -> Array2<Complex64> {
+    let mut gate_matrix = Array2::zeros((4, 4));
+
+    // Extract the 4x4 submatrix by looking at the subspace where these qubits act
+    // Gate indices: 0=|00⟩, 1=|01⟩, 2=|10⟩, 3=|11⟩ (control, target)
+    for gate_row in 0..4 {
+        for gate_col in 0..4 {
+            let control_row = (gate_row >> 1) & 1;
+            let target_row = gate_row & 1;
+            let control_col = (gate_col >> 1) & 1;
+            let target_col = gate_col & 1;
+
+            // Find the full system indices where:
+            // - Control and target qubits are in the specified states
+            // - All other qubits are in state 0
+            let mut row_idx = 0;
+            let mut col_idx = 0;
+
+            for q in 0..num_qubits {
+                let bit_pos = num_qubits - 1 - q;
+                if q == control {
+                    if control_row != 0 {
+                        row_idx |= 1 << bit_pos;
+                    }
+                    if control_col != 0 {
+                        col_idx |= 1 << bit_pos;
+                    }
+                } else if q == target {
+                    if target_row != 0 {
+                        row_idx |= 1 << bit_pos;
+                    }
+                    if target_col != 0 {
+                        col_idx |= 1 << bit_pos;
+                    }
+                }
+                // Other qubits stay at 0
+            }
+
+            gate_matrix[[gate_row, gate_col]] = full_matrix[[row_idx, col_idx]];
+        }
+    }
+
+    gate_matrix
 }
 
 impl fmt::Debug for Circuit {
