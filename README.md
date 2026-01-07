@@ -42,11 +42,29 @@ The most important feature comes from the implementation on the parameter shift 
 ## Contributing
 Contributions are welcome! Please open an issue or submit a pull request for any enhancements or bug fixes. For further details, please check the DevGuide.md
 
-<picture>
+<!-- <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=zazabap/LogosQ&type=Date&theme=dark" />
   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=zazabap/LogosQ&type=Date" />
   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=zazabap/LogosQ&type=Date" />
-</picture>
+</picture> -->
+
+## Citation
+
+If you use LogosQ in your research, please cite:
+
+**An, S., Wang, J., & Slavakis, K. (2025). LogosQ: A High-Performance and Type-Safe Quantum Computing Library in Rust.** *arXiv preprint arXiv:2512.23183*. https://arxiv.org/abs/2512.23183
+
+```bibtex
+@misc{an2025logosqhighperformancetypesafequantum,
+      title={LogosQ: A High-Performance and Type-Safe Quantum Computing Library in Rust}, 
+      author={Shiwen An and Jiayi Wang and Konstantinos Slavakis},
+      year={2025},
+      eprint={2512.23183},
+      archivePrefix={arXiv},
+      primaryClass={quant-ph},
+      url={https://arxiv.org/abs/2512.23183}, 
+}
+```
 
 ## License
 This project is licensed under the MIT License. See the LICENSE file for more details.
