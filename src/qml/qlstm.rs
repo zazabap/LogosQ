@@ -334,10 +334,31 @@ impl QLSTMCell {
         let o_t = Self::sigmoid_vec(&o_raw);
 
         // Ensure vectors have correct size (hidden_size)
-        let f_t: Vec<f64> = f_t.into_iter().take(self.config.hidden_size).collect();
-        let i_t: Vec<f64> = i_t.into_iter().take(self.config.hidden_size).collect();
-        let c_tilde: Vec<f64> = c_tilde.into_iter().take(self.config.hidden_size).collect();
-        let o_t: Vec<f64> = o_t.into_iter().take(self.config.hidden_size).collect();
+        // When num_qubits < hidden_size, VQC output has fewer elements, so we pad with zeros
+        let f_t: Vec<f64> = f_t
+            .into_iter()
+            .take(self.config.hidden_size)
+            .chain(std::iter::repeat(0.5)) // Pad with 0.5 (sigmoid midpoint) for gates
+            .take(self.config.hidden_size)
+            .collect();
+        let i_t: Vec<f64> = i_t
+            .into_iter()
+            .take(self.config.hidden_size)
+            .chain(std::iter::repeat(0.5)) // Pad with 0.5 (sigmoid midpoint) for gates
+            .take(self.config.hidden_size)
+            .collect();
+        let c_tilde: Vec<f64> = c_tilde
+            .into_iter()
+            .take(self.config.hidden_size)
+            .chain(std::iter::repeat(0.0)) // Pad with 0.0 (tanh midpoint) for cell gate
+            .take(self.config.hidden_size)
+            .collect();
+        let o_t: Vec<f64> = o_t
+            .into_iter()
+            .take(self.config.hidden_size)
+            .chain(std::iter::repeat(0.5)) // Pad with 0.5 (sigmoid midpoint) for gates
+            .take(self.config.hidden_size)
+            .collect();
 
         // Ensure cell_state has correct size
         let cell_state: Vec<f64> = cell_state
@@ -361,12 +382,22 @@ impl QLSTMCell {
         // ============ VQC₅: Hidden state processing ============
         // h_t = VQC₅(o_t ⊙ tanh(c_t))
         let h_t_raw = self.vqc_hidden.forward(&pre_hidden, params_h);
-        let h_t: Vec<f64> = h_t_raw.into_iter().take(self.config.hidden_size).collect();
+        let h_t: Vec<f64> = h_t_raw
+            .into_iter()
+            .take(self.config.hidden_size)
+            .chain(std::iter::repeat(0.0)) // Pad with 0.0 for hidden state
+            .take(self.config.hidden_size)
+            .collect();
 
         // ============ VQC₆: Output processing ============
         // y_t = VQC₆(h_t)
         let y_t_raw = self.vqc_output_proc.forward(&h_t, params_y);
-        let y_t: Vec<f64> = y_t_raw.into_iter().take(self.config.hidden_size).collect();
+        let y_t: Vec<f64> = y_t_raw
+            .into_iter()
+            .take(self.config.hidden_size)
+            .chain(std::iter::repeat(0.0)) // Pad with 0.0 for output
+            .take(self.config.hidden_size)
+            .collect();
 
         QLSTMOutput {
             hidden_state: h_t,

@@ -630,6 +630,80 @@ fn test_stacked_qlstm_parameter_count() {
 }
 
 #[test]
+fn test_qlstm_num_qubits_less_than_hidden_size() {
+    // Test the fix for the bug where gate vectors weren't properly padded
+    // when num_qubits < hidden_size
+    let hidden_size = 4;
+    let num_qubits = 2; // Explicitly less than hidden_size
+
+    let config = QLSTMConfig::new(1, hidden_size)
+        .with_num_layers(1)
+        .with_num_qubits(num_qubits);
+
+    let qlstm = QLSTM::new(config);
+    let num_params = qlstm.num_parameters();
+
+    let mut rng = rand::thread_rng();
+    let params: Vec<f64> = (0..num_params).map(|_| rng.gen_range(-0.5..0.5)).collect();
+
+    let sequence = vec![vec![0.1], vec![0.2], vec![0.3]];
+
+    // Before the fix, this would produce vectors with wrong dimensions
+    // or panic due to dimension mismatch in hadamard_product/add_vec
+    let output = qlstm.forward(&sequence, &params, None, None);
+
+    // Output should have exactly hidden_size elements (not num_qubits)
+    assert_eq!(output.len(), 1);
+    assert_eq!(
+        output[0].len(),
+        hidden_size,
+        "Output should have hidden_size={} elements, not num_qubits={}",
+        hidden_size,
+        num_qubits
+    );
+
+    // All values should be finite
+    for val in &output[0] {
+        assert!(val.is_finite(), "Output should be finite: {}", val);
+    }
+
+    // Test with return_sequences to verify all outputs have correct dimensions
+    let qlstm_seq = QLSTM::new(
+        QLSTMConfig::new(1, hidden_size)
+            .with_num_layers(1)
+            .with_num_qubits(num_qubits),
+    )
+    .with_return_sequences(true);
+
+    let outputs = qlstm_seq.forward(&sequence, &params, None, None);
+    assert_eq!(outputs.len(), sequence.len());
+    for (t, out) in outputs.iter().enumerate() {
+        assert_eq!(
+            out.len(),
+            hidden_size,
+            "Output at t={} should have {} elements",
+            t,
+            hidden_size
+        );
+    }
+
+    // Test forward_with_state to verify hidden and cell states have correct dimensions
+    let (_, final_hidden, final_cell) =
+        qlstm.forward_with_state(&sequence, &params, None, None);
+
+    assert_eq!(
+        final_hidden.len(),
+        hidden_size,
+        "Hidden state should have hidden_size elements"
+    );
+    assert_eq!(
+        final_cell.len(),
+        hidden_size,
+        "Cell state should have hidden_size elements"
+    );
+}
+
+#[test]
 fn test_qlstm_forward_with_state() {
     let config = QLSTMConfig::new(1, 2).with_num_layers(1);
     let qlstm = QLSTM::new(config);
