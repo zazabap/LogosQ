@@ -679,7 +679,7 @@ impl QLSTMTrainer {
     /// * `initial_params` - Initial parameters
     ///
     /// # Returns
-    /// Optimized parameters and final loss
+    /// Tuple of (best parameters, best loss) - the parameters that achieved the lowest loss
     pub fn train(
         &self,
         qlstm: &QLSTM,
@@ -689,6 +689,7 @@ impl QLSTMTrainer {
     ) -> (Vec<f64>, f64) {
         let mut params = initial_params.to_vec();
         let mut best_loss = f64::INFINITY;
+        let mut best_params = params.clone();
 
         for iteration in 0..self.max_iterations {
             // Forward pass
@@ -697,6 +698,7 @@ impl QLSTMTrainer {
 
             if loss < best_loss {
                 best_loss = loss;
+                best_params = params.clone();
             }
 
             // Check convergence
@@ -720,7 +722,7 @@ impl QLSTMTrainer {
             }
         }
 
-        (params, best_loss)
+        (best_params, best_loss)
     }
 }
 
