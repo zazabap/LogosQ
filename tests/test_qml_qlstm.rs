@@ -9,7 +9,7 @@
 //! 6. Stacked QLSTM layers
 //! 7. Cell creation and forward pass
 
-use logosq::qml::{mse_loss, QLSTMCell, QLSTMConfig, VQCType, QLSTM};
+use logosq::qml::{cross_entropy_loss, cross_entropy_loss_probabilities, mse_loss, QLSTMCell, QLSTMConfig, VQCType, QLSTM};
 use rand::Rng;
 use std::f64::consts::PI;
 
@@ -425,6 +425,105 @@ fn test_qlstm_mse_loss() {
     let loss = mse_loss(&output, &target);
     // MSE = ((0.5-1)^2 + (0.5-0)^2) / 2 = (0.25 + 0.25) / 2 = 0.25
     assert!((loss - 0.25).abs() < 1e-6, "MSE loss calculation incorrect");
+}
+
+#[test]
+fn test_cross_entropy_loss_with_z_expectations() {
+    // Test with Z expectation values in [-1, 1] (typical QLSTM/VQC output)
+    // Z expectation -0.8 should transform to probability (−0.8+1)/2 = 0.1
+    // Z expectation 0.6 should transform to probability (0.6+1)/2 = 0.8
+    let z_output = vec![-0.8, 0.6];
+    let target = vec![0.0, 1.0];
+
+    let loss = cross_entropy_loss(&z_output, &target);
+
+    // With transformation:
+    // p1 = 0.1, t1 = 0: loss1 = -ln(1 - 0.1) = -ln(0.9) ≈ 0.1054
+    // p2 = 0.8, t2 = 1: loss2 = -ln(0.8) ≈ 0.2231
+    // Mean: (0.1054 + 0.2231) / 2 ≈ 0.1642
+    assert!(loss > 0.0, "Cross-entropy loss should be positive");
+    assert!(loss < 1.0, "Loss should be reasonable for good predictions");
+    assert!(
+        (loss - 0.1642).abs() < 0.01,
+        "Expected loss ~0.1642, got {}",
+        loss
+    );
+}
+
+#[test]
+fn test_cross_entropy_loss_negative_values_handled() {
+    // Regression test: negative Z expectations should NOT be clamped to epsilon
+    // A Z expectation of -1.0 means 100% probability of |1⟩ state
+    // This should transform to p = 0.0 (predicting class 0 with 0% confidence)
+    let z_output = vec![-1.0];
+    let target = vec![0.0]; // Target is class 0
+
+    let loss = cross_entropy_loss(&z_output, &target);
+
+    // p = (-1 + 1) / 2 = 0.0 → clamped to epsilon
+    // For target=0: loss = -ln(1 - epsilon) ≈ 0 (very small)
+    // p = 0 means "probability of class 1 is 0" 
+    // For target = 0: we want p close to 0, so loss should be small
+    // loss = -[(0)*ln(epsilon) + (1)*ln(1-epsilon)] ≈ -ln(1) = 0
+    assert!(
+        loss < 0.01,
+        "When Z=-1 (p=0) and target=0, loss should be small, got {}",
+        loss
+    );
+
+    // Conversely, if target is 1 and we predict p=0, loss should be high
+    let target_one = vec![1.0];
+    let loss_high = cross_entropy_loss(&z_output, &target_one);
+    assert!(
+        loss_high > 10.0,
+        "When Z=-1 (p=0) and target=1, loss should be high, got {}",
+        loss_high
+    );
+}
+
+#[test]
+fn test_cross_entropy_loss_probabilities_function() {
+    // Test the cross_entropy_loss_probabilities function for pre-normalized inputs
+    let prob_output = vec![0.1, 0.8];
+    let target = vec![0.0, 1.0];
+
+    let loss = cross_entropy_loss_probabilities(&prob_output, &target);
+
+    // p1 = 0.1, t1 = 0: loss1 = -ln(1 - 0.1) = -ln(0.9) ≈ 0.1054
+    // p2 = 0.8, t2 = 1: loss2 = -ln(0.8) ≈ 0.2231
+    // Mean: (0.1054 + 0.2231) / 2 ≈ 0.1642
+    assert!(
+        (loss - 0.1642).abs() < 0.01,
+        "Expected loss ~0.1642 for [0,1] inputs, got {}",
+        loss
+    );
+}
+
+#[test]
+fn test_cross_entropy_loss_always_transforms() {
+    // Verify that cross_entropy_loss ALWAYS transforms inputs from [-1, 1] to [0, 1]
+    // Even for values that happen to fall in [0, 1], they are treated as Z expectations
+    
+    // Z = 0.6 transforms to p = (0.6 + 1) / 2 = 0.8
+    let z_output = vec![0.6];
+    let target = vec![1.0];
+    
+    let loss = cross_entropy_loss(&z_output, &target);
+    // p = 0.8, t = 1: loss = -ln(0.8) ≈ 0.2231
+    assert!(
+        (loss - 0.2231).abs() < 0.01,
+        "Z=0.6 should transform to p=0.8, loss ~0.2231, got {}",
+        loss
+    );
+    
+    // Compare with cross_entropy_loss_probabilities which doesn't transform
+    let loss_prob = cross_entropy_loss_probabilities(&z_output, &target);
+    // p = 0.6 (no transform), t = 1: loss = -ln(0.6) ≈ 0.5108
+    assert!(
+        (loss_prob - 0.5108).abs() < 0.01,
+        "With cross_entropy_loss_probabilities, p=0.6 directly, loss ~0.5108, got {}",
+        loss_prob
+    );
 }
 
 // ============================================================================

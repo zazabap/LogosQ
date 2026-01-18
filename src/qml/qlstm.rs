@@ -695,7 +695,41 @@ pub fn mse_loss(output: &[f64], target: &[f64]) -> f64 {
         / n as f64
 }
 
-/// Cross-entropy loss (for classification)
+/// Cross-entropy loss for classification with QLSTM/VQC outputs
+///
+/// This function is designed for use with quantum neural network outputs.
+/// QLSTM and VQC outputs are Z expectation values in the range [-1, 1],
+/// which are **always** transformed to probability values in [0, 1]
+/// before computing the cross-entropy loss.
+///
+/// # Transformation
+/// The Z expectation value `z ∈ [-1, 1]` is transformed to probability `p ∈ [0, 1]`:
+/// - `p = (z + 1) / 2`
+/// - `z = -1` → `p = 0` (qubit in |1⟩ state)
+/// - `z = +1` → `p = 1` (qubit in |0⟩ state)
+/// - `z = 0` → `p = 0.5` (equal superposition)
+///
+/// # Arguments
+/// * `output` - Model predictions as Z expectation values in [-1, 1]
+/// * `target` - Target values in [0, 1] (typically binary: 0 or 1)
+///
+/// # Returns
+/// The mean binary cross-entropy loss
+///
+/// # Example
+/// ```
+/// use logosq::qml::cross_entropy_loss;
+///
+/// // Z expectation values from QLSTM/VQC
+/// let output = vec![-0.8, 0.6];  // Will be transformed to [0.1, 0.8]
+/// let target = vec![0.0, 1.0];
+/// let loss = cross_entropy_loss(&output, &target);
+/// ```
+///
+/// # Note
+/// This function always applies the transformation from [-1, 1] to [0, 1].
+/// For standard cross-entropy loss with probability inputs already in [0, 1],
+/// use `cross_entropy_loss_probabilities` instead.
 pub fn cross_entropy_loss(output: &[f64], target: &[f64]) -> f64 {
     let epsilon = 1e-10;
     let n = output.len().min(target.len());
@@ -707,8 +741,39 @@ pub fn cross_entropy_loss(output: &[f64], target: &[f64]) -> f64 {
         .iter()
         .zip(target.iter())
         .map(|(&o, &t)| {
-            let o_clamped = o.clamp(epsilon, 1.0 - epsilon);
-            t * o_clamped.ln() + (1.0 - t) * (1.0 - o_clamped).ln()
+            // Always transform Z expectation values from [-1, 1] to probabilities in [0, 1]
+            let p = (o + 1.0) / 2.0;
+            let p_clamped = p.clamp(epsilon, 1.0 - epsilon);
+            t * p_clamped.ln() + (1.0 - t) * (1.0 - p_clamped).ln()
+        })
+        .sum::<f64>()
+        / n as f64
+}
+
+/// Cross-entropy loss for probability inputs already in [0, 1]
+///
+/// Use this function when your model outputs are already probabilities
+/// (e.g., after applying sigmoid or softmax), not Z expectation values.
+///
+/// # Arguments
+/// * `output` - Model predictions as probabilities in [0, 1]
+/// * `target` - Target values in [0, 1] (typically binary: 0 or 1)
+///
+/// # Returns
+/// The mean binary cross-entropy loss
+pub fn cross_entropy_loss_probabilities(output: &[f64], target: &[f64]) -> f64 {
+    let epsilon = 1e-10;
+    let n = output.len().min(target.len());
+    if n == 0 {
+        return 0.0;
+    }
+
+    -output
+        .iter()
+        .zip(target.iter())
+        .map(|(&o, &t)| {
+            let p_clamped = o.clamp(epsilon, 1.0 - epsilon);
+            t * p_clamped.ln() + (1.0 - t) * (1.0 - p_clamped).ln()
         })
         .sum::<f64>()
         / n as f64

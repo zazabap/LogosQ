@@ -35,5 +35,5 @@ pub mod vqc;
 
 // Re-exports for convenience
 pub use data_encoding::{AmplitudeEncoding, AngleEncoding, DataEncoder, IQPEncoding};
-pub use qlstm::{cross_entropy_loss, mse_loss, QLSTMCell, QLSTMConfig, QLSTMOutput, QLSTMTrainer, QLSTM};
+pub use qlstm::{cross_entropy_loss, cross_entropy_loss_probabilities, mse_loss, QLSTMCell, QLSTMConfig, QLSTMOutput, QLSTMTrainer, QLSTM};
 pub use vqc::{DressedVQC, VQCBuilder, VQCType, VariationalQuantumCircuit};
