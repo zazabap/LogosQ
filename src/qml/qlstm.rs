@@ -433,7 +433,11 @@ impl QLSTM {
         (hidden, cell)
     }
 
-    /// Process a single time step
+    /// Process a single time step through the first layer only
+    ///
+    /// Note: For stacked QLSTM (num_layers > 1), this method only processes
+    /// through the first layer using the first layer's parameters. Use `forward()`
+    /// for full stacked processing.
     pub fn step(
         &self,
         input: &[f64],
@@ -441,20 +445,33 @@ impl QLSTM {
         cell_state: &[f64],
         params: &[f64],
     ) -> QLSTMOutput {
-        self.cell.forward(input, hidden_state, cell_state, params)
+        let params_per_layer = self.cell.num_parameters();
+        // Use only the first layer's parameters
+        let layer_params = if params.len() >= params_per_layer {
+            &params[..params_per_layer]
+        } else {
+            params
+        };
+        self.cell.forward(input, hidden_state, cell_state, layer_params)
     }
 
     /// Process an entire sequence
     ///
+    /// For stacked QLSTM (num_layers > 1), each layer processes the entire sequence,
+    /// and its output becomes the input to the next layer.
+    ///
     /// # Arguments
     /// * `sequence` - Vector of input vectors, one per time step
-    /// * `params` - VQC parameters
-    /// * `initial_hidden` - Optional initial hidden state
-    /// * `initial_cell` - Optional initial cell state
+    /// * `params` - VQC parameters (concatenated for all layers)
+    /// * `initial_hidden` - Optional initial hidden state (for first layer only)
+    /// * `initial_cell` - Optional initial cell state (for first layer only)
     ///
     /// # Returns
-    /// If return_sequences is true: all hidden states
-    /// If return_sequences is false: only the final hidden state
+    /// If return_sequences is true: outputs (y_t from VQC₆) at each time step
+    /// If return_sequences is false: output (y_t from VQC₆) at the final time step only
+    ///
+    /// Note: In both cases, returns the processed output (y_t), not the hidden state (h_t).
+    /// Use `forward_with_state()` if you need access to the final hidden/cell states.
     pub fn forward(
         &self,
         sequence: &[Vec<f64>],
@@ -462,27 +479,88 @@ impl QLSTM {
         initial_hidden: Option<&[f64]>,
         initial_cell: Option<&[f64]>,
     ) -> Vec<Vec<f64>> {
-        let (h0, c0) = self.init_states();
-        let mut h_t = initial_hidden.unwrap_or(&h0).to_vec();
-        let mut c_t = initial_cell.unwrap_or(&c0).to_vec();
+        let (outputs, _, _) = self.forward_with_state(sequence, params, initial_hidden, initial_cell);
+        outputs
+    }
 
-        let mut outputs = Vec::new();
+    /// Process an entire sequence and return final states
+    ///
+    /// This is like `forward()` but also returns the final hidden and cell states,
+    /// which is useful for sequence-to-sequence models or when you need to continue
+    /// processing from where you left off.
+    ///
+    /// # Arguments
+    /// * `sequence` - Vector of input vectors, one per time step
+    /// * `params` - VQC parameters (concatenated for all layers)
+    /// * `initial_hidden` - Optional initial hidden state (for first layer only)
+    /// * `initial_cell` - Optional initial cell state (for first layer only)
+    ///
+    /// # Returns
+    /// Tuple of (outputs, final_hidden_state, final_cell_state)
+    /// - outputs: If return_sequences is true, all y_t; otherwise just the final y_t
+    /// - final_hidden_state: The h_t from the final layer's last timestep
+    /// - final_cell_state: The c_t from the final layer's last timestep
+    pub fn forward_with_state(
+        &self,
+        sequence: &[Vec<f64>],
+        params: &[f64],
+        initial_hidden: Option<&[f64]>,
+        initial_cell: Option<&[f64]>,
+    ) -> (Vec<Vec<f64>>, Vec<f64>, Vec<f64>) {
+        let params_per_layer = self.cell.num_parameters();
 
-        for input in sequence {
-            let output = self.step(input, &h_t, &c_t, params);
-            h_t = output.hidden_state;
-            c_t = output.cell_state;
+        // Current sequence to process (starts as input sequence)
+        let mut current_sequence: Vec<Vec<f64>> = sequence.to_vec();
 
-            if self.return_sequences {
-                outputs.push(output.output);
+        // Final states (will be updated by each layer)
+        let mut final_h_t = vec![0.0; self.cell.config.hidden_size];
+        let mut final_c_t = vec![0.0; self.cell.config.hidden_size];
+
+        for layer_idx in 0..self.num_layers {
+            // Get parameters for this layer
+            let layer_params =
+                &params[layer_idx * params_per_layer..(layer_idx + 1) * params_per_layer];
+
+            // Initialize states for this layer
+            let (h0, c0) = self.init_states();
+            let mut h_t = if layer_idx == 0 {
+                initial_hidden.unwrap_or(&h0).to_vec()
+            } else {
+                h0
+            };
+            let mut c_t = if layer_idx == 0 {
+                initial_cell.unwrap_or(&c0).to_vec()
+            } else {
+                c0
+            };
+
+            let mut layer_outputs = Vec::new();
+
+            // Process each time step through this layer
+            for input in &current_sequence {
+                let output = self.cell.forward(input, &h_t, &c_t, layer_params);
+                h_t = output.hidden_state;
+                c_t = output.cell_state;
+                layer_outputs.push(output.output);
             }
+
+            // Store final states from this layer
+            final_h_t = h_t;
+            final_c_t = c_t;
+
+            // Next layer takes this layer's outputs as its inputs
+            current_sequence = layer_outputs;
         }
 
-        if self.return_sequences {
-            outputs
+        let outputs = if self.return_sequences {
+            current_sequence
         } else {
-            vec![h_t]
-        }
+            // Return the final output (y_t), not the hidden state (h_t)
+            // This ensures consistent semantics: forward() always returns outputs
+            vec![current_sequence.pop().unwrap_or_else(|| vec![0.0; self.cell.config.hidden_size])]
+        };
+
+        (outputs, final_h_t, final_c_t)
     }
 
     /// Compute gradient using parameter-shift rule
@@ -739,5 +817,43 @@ mod tests {
         for g in &gradient {
             assert!(g.is_finite());
         }
+    }
+
+    #[test]
+    fn test_stacked_qlstm() {
+        // Test QLSTM with num_layers > 1 (stacked layers)
+        let config = QLSTMConfig::new(1, 2).with_num_layers(1);
+        let qlstm = QLSTM::new(config).with_num_layers(2); // 2 stacked layers
+
+        let num_params = qlstm.num_parameters();
+        let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.01).collect();
+
+        let sequence = vec![vec![0.1], vec![0.2], vec![0.3]];
+
+        // This should work without panicking
+        let output = qlstm.forward(&sequence, &params, None, None);
+
+        // Should return final hidden state
+        assert_eq!(output.len(), 1);
+        assert_eq!(output[0].len(), 2); // hidden_size = 2
+    }
+
+    #[test]
+    fn test_stacked_qlstm_return_sequences() {
+        // Test stacked QLSTM with return_sequences = true
+        let config = QLSTMConfig::new(1, 2).with_num_layers(1);
+        let qlstm = QLSTM::new(config)
+            .with_num_layers(2)
+            .with_return_sequences(true);
+
+        let num_params = qlstm.num_parameters();
+        let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.01).collect();
+
+        let sequence = vec![vec![0.1], vec![0.2], vec![0.3], vec![0.4]];
+
+        let output = qlstm.forward(&sequence, &params, None, None);
+
+        // With return_sequences, we get output at each time step
+        assert_eq!(output.len(), 4);
     }
 }

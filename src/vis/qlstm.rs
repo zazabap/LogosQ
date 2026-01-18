@@ -346,7 +346,18 @@ pub fn vqc_svg_diagram(vqc: &VariationalQuantumCircuit) -> String {
     let cell_width = 50;
     let cell_height = 40;
     let margin = 60;
-    let num_cols = vqc.num_layers * 3 + (if vqc.include_input_encoding { 2 } else { 1 });
+    
+    // Calculate columns per layer based on VQC type:
+    // - Simple: 1 column (RY only)
+    // - BasicEntangling/Custom: 3 columns (RY + RZ + CNOT ladder)
+    // - StronglyEntangling: 4 columns (RZ + RY + RZ + CNOT chain)
+    let cols_per_layer = match vqc.vqc_type {
+        VQCType::Simple => 1,
+        VQCType::BasicEntangling | VQCType::Custom => 3,
+        VQCType::StronglyEntangling => 4,
+    };
+    // +1 for measurement column, +1 additional if input encoding is included
+    let num_cols = vqc.num_layers * cols_per_layer + (if vqc.include_input_encoding { 2 } else { 1 });
     let width = num_cols * cell_width + 2 * margin;
     let height = vqc.num_qubits * cell_height + 2 * margin + 40;
 
