@@ -213,11 +213,17 @@ impl VariationalQuantumCircuit {
         expectations
     }
 
-    /// Compute the output with a final activation (tanh-like)
+    /// Compute the output with a tanh activation applied
     ///
-    /// Maps the Z expectations from [-1, 1] to a desired range
+    /// Takes the Z expectation values from `forward()` (already in [-1, 1])
+    /// and applies tanh to introduce additional non-linearity, squashing
+    /// values closer to the center of the range. This is useful for LSTM-style
+    /// gating where tanh activation is commonly used.
     pub fn forward_activated(&self, inputs: &[f64], params: &[f64]) -> Vec<f64> {
         self.forward(inputs, params)
+            .into_iter()
+            .map(|x| x.tanh())
+            .collect()
     }
 }
 
@@ -340,5 +346,34 @@ mod tests {
             include_input_encoding: true,
         };
         assert_eq!(basic.num_variational_params(), 12); // 2 * 3 * 2
+    }
+
+    #[test]
+    fn test_forward_activated_applies_tanh() {
+        let vqc = VariationalQuantumCircuit::new(2, 1);
+        let inputs = vec![0.5, 0.3];
+        let params = vec![0.1, 0.2, 0.3, 0.4];
+
+        let raw_output = vqc.forward(&inputs, &params);
+        let activated_output = vqc.forward_activated(&inputs, &params);
+
+        assert_eq!(raw_output.len(), activated_output.len());
+
+        // Verify tanh is applied: activated = tanh(raw)
+        for (raw, activated) in raw_output.iter().zip(activated_output.iter()) {
+            let expected = raw.tanh();
+            assert!(
+                (activated - expected).abs() < 1e-10,
+                "Expected tanh({}) = {}, got {}",
+                raw,
+                expected,
+                activated
+            );
+        }
+
+        // Activated output should still be in [-1, 1]
+        for &o in &activated_output {
+            assert!(o >= -1.0 && o <= 1.0);
+        }
     }
 }
