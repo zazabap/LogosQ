@@ -154,6 +154,19 @@ pub use crate::noise::{
 };
 
 // ============================================================================
+// QUANTUM MACHINE LEARNING
+// ============================================================================
+
+pub use crate::qml::{
+    // Data encoding
+    data_encoding::{AmplitudeEncoding, AngleEncoding, DataEncoder, IQPEncoding},
+    // QLSTM
+    qlstm::{mse_loss, cross_entropy_loss, cross_entropy_loss_probabilities, QLSTMCell, QLSTMConfig, QLSTMOutput, QLSTMTrainer, QLSTM},
+    // VQC
+    vqc::{DressedVQC, VQCBuilder, VQCType, VariationalQuantumCircuit},
+};
+
+// ============================================================================
 // COMMON CONSTANTS
 // ============================================================================
 
