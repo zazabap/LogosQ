@@ -379,23 +379,26 @@ impl QLSTMCell {
 /// Full QLSTM layer for sequence processing
 ///
 /// Processes a sequence of inputs through one or more QLSTM cells.
+/// 
+/// For stacked QLSTM (`num_layers > 1`), each layer after the first uses
+/// `hidden_size` as its input size, since intermediate layers receive
+/// outputs from the previous layer (which have `hidden_size` dimensions).
 #[derive(Clone, Debug)]
 pub struct QLSTM {
-    /// The QLSTM cell
-    cell: QLSTMCell,
+    /// QLSTM cells for each layer (may have different input sizes)
+    /// - cells[0] uses the configured `input_size`
+    /// - cells[1..] use `hidden_size` as input size
+    cells: Vec<QLSTMCell>,
     /// Whether to return sequences or just the final output
     return_sequences: bool,
-    /// Number of LSTM layers (stacked)
-    num_layers: usize,
 }
 
 impl QLSTM {
     /// Create a new QLSTM layer
     pub fn new(config: QLSTMConfig) -> Self {
         Self {
-            cell: QLSTMCell::new(config),
+            cells: vec![QLSTMCell::new(config)],
             return_sequences: false,
-            num_layers: 1,
         }
     }
 
@@ -405,31 +408,66 @@ impl QLSTM {
         self
     }
 
-    /// Create stacked QLSTM
+    /// Create stacked QLSTM with multiple layers
+    ///
+    /// For stacked QLSTM, intermediate layers (layer 1 and onwards) use
+    /// `hidden_size` as their input size, since they receive outputs from
+    /// the previous layer which have `hidden_size` dimensions.
+    ///
+    /// This ensures no information loss between layers when `input_size != hidden_size`.
     pub fn with_num_layers(mut self, num_layers: usize) -> Self {
-        self.num_layers = num_layers;
+        if num_layers <= 1 {
+            return self;
+        }
+
+        // Get the first layer's config
+        let base_config = &self.cells[0].config;
+        let hidden_size = base_config.hidden_size;
+
+        // Create intermediate layer config where input_size = hidden_size
+        // This is necessary because intermediate layers receive outputs from
+        // the previous layer, which have hidden_size dimensions
+        let intermediate_config = QLSTMConfig {
+            num_qubits: (hidden_size + hidden_size).max(2), // 2 * hidden_size for intermediate layers
+            num_layers: base_config.num_layers,
+            input_size: hidden_size, // Key change: intermediate layers use hidden_size as input
+            hidden_size,
+            vqc_type: base_config.vqc_type.clone(),
+            use_classical_preprocessing: base_config.use_classical_preprocessing,
+        };
+
+        // Keep first cell, add intermediate cells
+        for _ in 1..num_layers {
+            self.cells.push(QLSTMCell::new(intermediate_config.clone()));
+        }
+
         self
     }
 
-    /// Get the configuration
-    pub fn config(&self) -> &QLSTMConfig {
-        &self.cell.config
+    /// Get the number of stacked layers
+    pub fn num_layers(&self) -> usize {
+        self.cells.len()
     }
 
-    /// Get total number of parameters
+    /// Get the configuration of the first layer
+    pub fn config(&self) -> &QLSTMConfig {
+        &self.cells[0].config
+    }
+
+    /// Get total number of parameters across all layers
     pub fn num_parameters(&self) -> usize {
-        self.cell.num_parameters() * self.num_layers
+        self.cells.iter().map(|c| c.num_parameters()).sum()
     }
 
     /// Get the hidden size
     pub fn hidden_size(&self) -> usize {
-        self.cell.config.hidden_size
+        self.cells[0].config.hidden_size
     }
 
     /// Initialize hidden and cell states
     pub fn init_states(&self) -> (Vec<f64>, Vec<f64>) {
-        let hidden = vec![0.0; self.cell.config.hidden_size];
-        let cell = vec![0.0; self.cell.config.hidden_size];
+        let hidden = vec![0.0; self.cells[0].config.hidden_size];
+        let cell = vec![0.0; self.cells[0].config.hidden_size];
         (hidden, cell)
     }
 
@@ -445,14 +483,14 @@ impl QLSTM {
         cell_state: &[f64],
         params: &[f64],
     ) -> QLSTMOutput {
-        let params_per_layer = self.cell.num_parameters();
+        let params_per_layer = self.cells[0].num_parameters();
         // Use only the first layer's parameters
         let layer_params = if params.len() >= params_per_layer {
             &params[..params_per_layer]
         } else {
             params
         };
-        self.cell.forward(input, hidden_state, cell_state, layer_params)
+        self.cells[0].forward(input, hidden_state, cell_state, layer_params)
     }
 
     /// Process an entire sequence
@@ -507,19 +545,23 @@ impl QLSTM {
         initial_hidden: Option<&[f64]>,
         initial_cell: Option<&[f64]>,
     ) -> (Vec<Vec<f64>>, Vec<f64>, Vec<f64>) {
-        let params_per_layer = self.cell.num_parameters();
-
         // Current sequence to process (starts as input sequence)
         let mut current_sequence: Vec<Vec<f64>> = sequence.to_vec();
 
         // Final states (will be updated by each layer)
-        let mut final_h_t = vec![0.0; self.cell.config.hidden_size];
-        let mut final_c_t = vec![0.0; self.cell.config.hidden_size];
+        let hidden_size = self.cells[0].config.hidden_size;
+        let mut final_h_t = vec![0.0; hidden_size];
+        let mut final_c_t = vec![0.0; hidden_size];
 
-        for layer_idx in 0..self.num_layers {
+        // Track parameter offset for each layer (since layers may have different param counts)
+        let mut param_offset = 0;
+
+        for (layer_idx, cell) in self.cells.iter().enumerate() {
+            let params_for_layer = cell.num_parameters();
+            
             // Get parameters for this layer
-            let layer_params =
-                &params[layer_idx * params_per_layer..(layer_idx + 1) * params_per_layer];
+            let layer_params = &params[param_offset..param_offset + params_for_layer];
+            param_offset += params_for_layer;
 
             // Initialize states for this layer
             let (h0, c0) = self.init_states();
@@ -538,7 +580,7 @@ impl QLSTM {
 
             // Process each time step through this layer
             for input in &current_sequence {
-                let output = self.cell.forward(input, &h_t, &c_t, layer_params);
+                let output = cell.forward(input, &h_t, &c_t, layer_params);
                 h_t = output.hidden_state;
                 c_t = output.cell_state;
                 layer_outputs.push(output.output);
@@ -557,7 +599,7 @@ impl QLSTM {
         } else {
             // Return the final output (y_t), not the hidden state (h_t)
             // This ensures consistent semantics: forward() always returns outputs
-            vec![current_sequence.pop().unwrap_or_else(|| vec![0.0; self.cell.config.hidden_size])]
+            vec![current_sequence.pop().unwrap_or_else(|| vec![0.0; hidden_size])]
         };
 
         (outputs, final_h_t, final_c_t)
@@ -723,139 +765,5 @@ impl QLSTMTrainer {
         }
 
         (best_params, best_loss)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_qlstm_cell_creation() {
-        let config = QLSTMConfig::new(2, 4);
-        let cell = QLSTMCell::new(config);
-
-        assert_eq!(cell.config.input_size, 2);
-        assert_eq!(cell.config.hidden_size, 4);
-    }
-
-    #[test]
-    fn test_qlstm_cell_forward() {
-        let config = QLSTMConfig::new(2, 4).with_num_layers(1);
-        let cell = QLSTMCell::new(config);
-
-        let num_params = cell.num_parameters();
-        let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.01).collect();
-
-        let input = vec![0.5, 0.3];
-        let hidden = vec![0.0; 4];
-        let cell_state = vec![0.0; 4];
-
-        let output = cell.forward(&input, &hidden, &cell_state, &params);
-
-        assert_eq!(output.hidden_state.len(), 4);
-        assert_eq!(output.cell_state.len(), 4);
-        assert_eq!(output.output.len(), 4);
-    }
-
-    #[test]
-    fn test_qlstm_sequence() {
-        let config = QLSTMConfig::new(1, 2).with_num_layers(1);
-        let qlstm = QLSTM::new(config);
-
-        let num_params = qlstm.num_parameters();
-        let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.01).collect();
-
-        let sequence = vec![vec![0.1], vec![0.2], vec![0.3], vec![0.4]];
-
-        let output = qlstm.forward(&sequence, &params, None, None);
-
-        // Without return_sequences, we get only the final state
-        assert_eq!(output.len(), 1);
-        assert_eq!(output[0].len(), 2);
-    }
-
-    #[test]
-    fn test_qlstm_return_sequences() {
-        let config = QLSTMConfig::new(1, 2).with_num_layers(1);
-        let qlstm = QLSTM::new(config).with_return_sequences(true);
-
-        let num_params = qlstm.num_parameters();
-        let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.01).collect();
-
-        let sequence = vec![vec![0.1], vec![0.2], vec![0.3], vec![0.4]];
-
-        let output = qlstm.forward(&sequence, &params, None, None);
-
-        // With return_sequences, we get output at each time step
-        assert_eq!(output.len(), 4);
-    }
-
-    #[test]
-    fn test_mse_loss() {
-        let output = vec![0.5, 0.5];
-        let target = vec![1.0, 0.0];
-
-        let loss = mse_loss(&output, &target);
-        // MSE = ((0.5-1)^2 + (0.5-0)^2) / 2 = (0.25 + 0.25) / 2 = 0.25
-        assert!((loss - 0.25).abs() < 1e-6);
-    }
-
-    #[test]
-    fn test_qlstm_gradient() {
-        let config = QLSTMConfig::new(1, 2).with_num_layers(1).with_num_qubits(3);
-        let qlstm = QLSTM::new(config);
-
-        let num_params = qlstm.num_parameters();
-        let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.1).collect();
-
-        let sequence = vec![vec![0.5]];
-        let target = vec![0.3, 0.7];
-
-        let gradient = qlstm.compute_gradient(&sequence, &target, &params, mse_loss);
-
-        assert_eq!(gradient.len(), num_params);
-        // Gradients should be finite
-        for g in &gradient {
-            assert!(g.is_finite());
-        }
-    }
-
-    #[test]
-    fn test_stacked_qlstm() {
-        // Test QLSTM with num_layers > 1 (stacked layers)
-        let config = QLSTMConfig::new(1, 2).with_num_layers(1);
-        let qlstm = QLSTM::new(config).with_num_layers(2); // 2 stacked layers
-
-        let num_params = qlstm.num_parameters();
-        let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.01).collect();
-
-        let sequence = vec![vec![0.1], vec![0.2], vec![0.3]];
-
-        // This should work without panicking
-        let output = qlstm.forward(&sequence, &params, None, None);
-
-        // Should return final hidden state
-        assert_eq!(output.len(), 1);
-        assert_eq!(output[0].len(), 2); // hidden_size = 2
-    }
-
-    #[test]
-    fn test_stacked_qlstm_return_sequences() {
-        // Test stacked QLSTM with return_sequences = true
-        let config = QLSTMConfig::new(1, 2).with_num_layers(1);
-        let qlstm = QLSTM::new(config)
-            .with_num_layers(2)
-            .with_return_sequences(true);
-
-        let num_params = qlstm.num_parameters();
-        let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.01).collect();
-
-        let sequence = vec![vec![0.1], vec![0.2], vec![0.3], vec![0.4]];
-
-        let output = qlstm.forward(&sequence, &params, None, None);
-
-        // With return_sequences, we get output at each time step
-        assert_eq!(output.len(), 4);
     }
 }

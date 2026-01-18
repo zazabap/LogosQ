@@ -6,8 +6,10 @@
 //! 3. XOR sequence task
 //! 4. Gradient verification
 //! 5. Variable sequence length handling
+//! 6. Stacked QLSTM layers
+//! 7. Cell creation and forward pass
 
-use logosq::qml::{mse_loss, QLSTMConfig, VQCType, QLSTM};
+use logosq::qml::{mse_loss, QLSTMCell, QLSTMConfig, VQCType, QLSTM};
 use rand::Rng;
 use std::f64::consts::PI;
 
@@ -423,4 +425,234 @@ fn test_qlstm_mse_loss() {
     let loss = mse_loss(&output, &target);
     // MSE = ((0.5-1)^2 + (0.5-0)^2) / 2 = (0.25 + 0.25) / 2 = 0.25
     assert!((loss - 0.25).abs() < 1e-6, "MSE loss calculation incorrect");
+}
+
+// ============================================================================
+// Unit Tests (moved from src/qml/qlstm.rs)
+// ============================================================================
+
+#[test]
+fn test_qlstm_cell_creation() {
+    let config = QLSTMConfig::new(2, 4);
+    let cell = QLSTMCell::new(config.clone());
+
+    assert_eq!(cell.config.input_size, 2);
+    assert_eq!(cell.config.hidden_size, 4);
+}
+
+#[test]
+fn test_qlstm_cell_forward() {
+    let config = QLSTMConfig::new(2, 4).with_num_layers(1);
+    let cell = QLSTMCell::new(config);
+
+    let num_params = cell.num_parameters();
+    let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.01).collect();
+
+    let input = vec![0.5, 0.3];
+    let hidden = vec![0.0; 4];
+    let cell_state = vec![0.0; 4];
+
+    let output = cell.forward(&input, &hidden, &cell_state, &params);
+
+    assert_eq!(output.hidden_state.len(), 4);
+    assert_eq!(output.cell_state.len(), 4);
+    assert_eq!(output.output.len(), 4);
+}
+
+#[test]
+fn test_qlstm_sequence() {
+    let config = QLSTMConfig::new(1, 2).with_num_layers(1);
+    let qlstm = QLSTM::new(config);
+
+    let num_params = qlstm.num_parameters();
+    let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.01).collect();
+
+    let sequence = vec![vec![0.1], vec![0.2], vec![0.3], vec![0.4]];
+
+    let output = qlstm.forward(&sequence, &params, None, None);
+
+    // Without return_sequences, we get only the final state
+    assert_eq!(output.len(), 1);
+    assert_eq!(output[0].len(), 2);
+}
+
+#[test]
+fn test_qlstm_gradient() {
+    let config = QLSTMConfig::new(1, 2).with_num_layers(1).with_num_qubits(3);
+    let qlstm = QLSTM::new(config);
+
+    let num_params = qlstm.num_parameters();
+    let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.1).collect();
+
+    let sequence = vec![vec![0.5]];
+    let target = vec![0.3, 0.7];
+
+    let gradient = qlstm.compute_gradient(&sequence, &target, &params, mse_loss);
+
+    assert_eq!(gradient.len(), num_params);
+    // Gradients should be finite
+    for g in &gradient {
+        assert!(g.is_finite());
+    }
+}
+
+#[test]
+fn test_stacked_qlstm() {
+    // Test QLSTM with num_layers > 1 (stacked layers)
+    let config = QLSTMConfig::new(1, 2).with_num_layers(1);
+    let qlstm = QLSTM::new(config).with_num_layers(2); // 2 stacked layers
+
+    let num_params = qlstm.num_parameters();
+    let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.01).collect();
+
+    let sequence = vec![vec![0.1], vec![0.2], vec![0.3]];
+
+    // This should work without panicking
+    let output = qlstm.forward(&sequence, &params, None, None);
+
+    // Should return final hidden state
+    assert_eq!(output.len(), 1);
+    assert_eq!(output[0].len(), 2); // hidden_size = 2
+}
+
+#[test]
+fn test_stacked_qlstm_return_sequences_basic() {
+    // Test stacked QLSTM with return_sequences = true
+    let config = QLSTMConfig::new(1, 2).with_num_layers(1);
+    let qlstm = QLSTM::new(config)
+        .with_num_layers(2)
+        .with_return_sequences(true);
+
+    let num_params = qlstm.num_parameters();
+    let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.01).collect();
+
+    let sequence = vec![vec![0.1], vec![0.2], vec![0.3], vec![0.4]];
+
+    let output = qlstm.forward(&sequence, &params, None, None);
+
+    // With return_sequences, we get output at each time step
+    assert_eq!(output.len(), 4);
+}
+
+#[test]
+fn test_stacked_qlstm_different_input_hidden_sizes() {
+    // Test stacked QLSTM where input_size != hidden_size
+    // This tests the fix for information loss between layers
+    let input_size = 1;
+    let hidden_size = 4; // hidden_size > input_size
+
+    let config = QLSTMConfig::new(input_size, hidden_size).with_num_layers(1);
+    let qlstm = QLSTM::new(config).with_num_layers(2);
+
+    // Verify the layer count
+    assert_eq!(qlstm.num_layers(), 2);
+
+    let num_params = qlstm.num_parameters();
+    let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.01).collect();
+
+    let sequence = vec![vec![0.1], vec![0.2], vec![0.3]];
+
+    // This should work without information loss
+    let output = qlstm.forward(&sequence, &params, None, None);
+
+    assert_eq!(output.len(), 1);
+    assert_eq!(output[0].len(), hidden_size);
+
+    // Verify all output elements are finite (no NaN/Inf from truncation issues)
+    for val in &output[0] {
+        assert!(val.is_finite(), "Output contains non-finite value: {}", val);
+    }
+}
+
+#[test]
+fn test_stacked_qlstm_no_truncation() {
+    // Verify that intermediate layers receive proper input dimensions
+    // by checking that stacked QLSTM produces valid outputs
+    let input_size = 1;
+    let hidden_size = 4;
+
+    let config = QLSTMConfig::new(input_size, hidden_size).with_num_layers(1);
+    let qlstm = QLSTM::new(config).with_num_layers(2);
+
+    // Verify num_layers is correct
+    assert_eq!(qlstm.num_layers(), 2);
+
+    let num_params = qlstm.num_parameters();
+
+    // Use non-trivial parameters
+    let params: Vec<f64> = (0..num_params)
+        .map(|i| 0.5 + (i as f64) * 0.1 % 1.0)
+        .collect();
+
+    let sequence = vec![vec![0.5], vec![0.3], vec![0.7]];
+
+    // Verify we can run forward without issues
+    let output = qlstm.forward(&sequence, &params, None, None);
+
+    assert_eq!(output.len(), 1);
+    assert_eq!(output[0].len(), hidden_size);
+
+    // All outputs should be valid numbers
+    for (i, val) in output[0].iter().enumerate() {
+        assert!(
+            val.is_finite() && *val >= -1.0 && *val <= 1.0,
+            "Output[{}] = {} should be finite and in [-1, 1]",
+            i,
+            val
+        );
+    }
+}
+
+#[test]
+fn test_stacked_qlstm_parameter_count() {
+    // Verify that stacked QLSTM with different input/hidden sizes
+    // has more parameters than a single layer would suggest
+    let input_size = 1;
+    let hidden_size = 4;
+
+    let config = QLSTMConfig::new(input_size, hidden_size).with_num_layers(1);
+    let single_layer = QLSTM::new(config.clone());
+    let stacked = QLSTM::new(config).with_num_layers(3);
+
+    let single_params = single_layer.num_parameters();
+    let stacked_params = stacked.num_parameters();
+
+    // Stacked should have more parameters
+    // First layer: input_size=1, subsequent layers: input_size=hidden_size=4
+    // So layer 1 has different param count than layers 2 and 3
+    assert!(
+        stacked_params > single_params,
+        "Stacked QLSTM should have more parameters"
+    );
+
+    // Should have 3 layers
+    assert_eq!(stacked.num_layers(), 3);
+}
+
+#[test]
+fn test_qlstm_forward_with_state() {
+    let config = QLSTMConfig::new(1, 2).with_num_layers(1);
+    let qlstm = QLSTM::new(config);
+
+    let num_params = qlstm.num_parameters();
+    let params: Vec<f64> = (0..num_params).map(|i| (i as f64) * 0.01).collect();
+
+    let sequence = vec![vec![0.1], vec![0.2], vec![0.3]];
+
+    // Test forward_with_state returns proper states
+    let (outputs, final_hidden, final_cell) =
+        qlstm.forward_with_state(&sequence, &params, None, None);
+
+    assert_eq!(outputs.len(), 1); // return_sequences is false by default
+    assert_eq!(outputs[0].len(), 2);
+    assert_eq!(final_hidden.len(), 2);
+    assert_eq!(final_cell.len(), 2);
+
+    // States should be finite
+    for val in &final_hidden {
+        assert!(val.is_finite());
+    }
+    for val in &final_cell {
+        assert!(val.is_finite());
+    }
 }
